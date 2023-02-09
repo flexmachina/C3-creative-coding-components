@@ -1,2 +1,2 @@
 # C3-creative-coding-components
-WASM based tools for creative coders to generate XR art experiences
+WASM based tools for creative coders to generate 3D & XR art experiences
