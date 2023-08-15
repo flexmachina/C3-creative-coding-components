@@ -1,6 +1,6 @@
 
-use tutorial1_window::run;
+use dev_project_1::run;
 
 fn main() {
-    run();
+   pollster::block_on(run());
 }
