@@ -1,17 +1,14 @@
 [package]
-name = "dev_project_1"
+name = "tutorial2-surface"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Ben Hansen <bhbenjaminhansen@gmail.com>"]
+edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-
 [dependencies]
 cfg-if = "1"
-
 winit = "0.28"
 env_logger = "0.10"
 log = "0.4"
@@ -29,6 +26,11 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Element",
 ]}
- 
 
+[[bin]]
+name = "tutorial2-surface"
+path = "src/main.rs"
 
+[[bin]]
+name = "tutorial2-challenge"
+path = "src/challenge.rs"
