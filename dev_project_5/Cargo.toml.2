@@ -1,32 +1,19 @@
 [package]
-name = "dev_project_1"
+name = "tutorial2-surface"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Ben Hansen <bhbenjaminhansen@gmail.com>"]
+edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-
 [dependencies]
 cfg-if = "1"
-
 winit = "0.28"
 env_logger = "0.10"
 log = "0.4"
 wgpu = "0.17"
 pollster = "0.3"
-bytemuck = { version = "1.12", features = [ "derive" ] }
-anyhow = "1.0"
-
-[dependencies.image]
-version = "0.24"
-default-features = false
-features = ["png", "jpeg"]
-
-
-
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
@@ -39,6 +26,11 @@ web-sys = { version = "0.3", features = [
     "Window",
     "Element",
 ]}
- 
 
+[[bin]]
+name = "tutorial2-surface"
+path = "src/main.rs"
 
+[[bin]]
+name = "tutorial2-challenge"
+path = "src/challenge.rs"
