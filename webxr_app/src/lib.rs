@@ -199,10 +199,10 @@ impl State {
     fn input(&mut self, event: &WindowEvent) -> bool {
 
         match event {
-            WindowEvent::CursorMoved { device_id, position, modifiers} => {
+            WindowEvent::CursorMoved { position, ..} => {
                 self.cursor_pos = *position;
             }
-            _ => { return false}   
+            _ => { return false }   
         }
 
         return true
@@ -284,14 +284,14 @@ pub async fn run() {
         // Winit prevents sizing with CSS, so we have to set
         // the size manually when on web.
         use winit::dpi::PhysicalSize;
-        window.set_inner_size(PhysicalSize::new(450, 400));
+        state.window.set_inner_size(PhysicalSize::new(450, 400));
 
         use winit::platform::web::WindowExtWebSys;
         web_sys::window()
             .and_then(|win| win.document())
             .and_then(|doc| {
                 let dst = doc.get_element_by_id("wasm-example")?;
-                let canvas = web_sys::Element::from(window.canvas());
+                let canvas = web_sys::Element::from(state.window.canvas());
                 dst.append_child(&canvas).ok()?;
                 Some(())
             })
