@@ -1,3 +1,6 @@
+mod app;
+mod utils;
+
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
@@ -286,6 +289,13 @@ impl State {
 
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
 pub async fn run() {
+    println!("Xr Run!");
+    let a = crate::app::XrApp::new();
+    return a.init();    
+}
+
+//#[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
+pub async fn run_old() {
 
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
