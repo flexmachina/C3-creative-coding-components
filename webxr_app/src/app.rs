@@ -1,13 +1,12 @@
 #![cfg(web_sys_unstable_apis)]
 
-#[macro_use]
+//#[macro_use]
 
-use js_sys::{Object, Promise, Reflect};
+use js_sys::{Object, Reflect};
 use std::cell::RefCell;
 use std::rc::Rc;
-use utils::set_panic_hook;
+use crate::utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::future_to_promise;
 use web_sys::*;
 
 // A macro to provide `println!(..)`-style syntax for `console.log` logging.
@@ -15,11 +14,6 @@ macro_rules! log {
     ( $( $t:tt )* ) => {
         web_sys::console::log_1(&format!( $( $t )* ).into());
     }
-}
-
-pub fn test2()
-{
-
 }
 
 fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFrame)>) -> u32 {
@@ -58,15 +52,12 @@ pub fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsV
     Ok(gl)
 }
 
-#[wasm_bindgen]
 pub struct XrApp {
     session: Rc<RefCell<Option<XrSession>>>,
     gl: Rc<WebGl2RenderingContext>,
 }
 
-#[wasm_bindgen]
-pub impl XrApp {
-    #[wasm_bindgen(constructor)]
+impl XrApp {
     pub fn new() -> XrApp {
         set_panic_hook();
 
@@ -85,39 +76,30 @@ pub impl XrApp {
         let session_mode = XrSessionMode::Inline;
         let session_supported_promise = xr.is_session_supported(session_mode);
 
-        // Note: &self is on the stack so we can't use it in a future (which will
-        // run after the &self reference is out or scope). Clone ref to the parts
-        // of self we'll need, then move them into the Future
-        // See https://github.com/rustwasm/wasm-bindgen/issues/1858#issuecomment-552095511
-        let session = self.session.clone();
-        let gl = self.gl.clone();
-
         let supports_session =
             wasm_bindgen_futures::JsFuture::from(session_supported_promise).await;
         let supports_session = supports_session.unwrap();
         if supports_session == false {
             log!("XR session not supported");
-            return Ok(JsValue::from("XR session not supported"));
+            return ();
         }
 
         let xr_session_promise = xr.request_session(session_mode);
         let xr_session = wasm_bindgen_futures::JsFuture::from(xr_session_promise).await;
         let xr_session: XrSession = xr_session.unwrap().into();
 
-        let xr_gl_layer = XrWebGlLayer::new_with_web_gl2_rendering_context(&xr_session, &gl)?;
+        let xr_gl_layer = XrWebGlLayer::new_with_web_gl2_rendering_context(&xr_session, &self.gl).unwrap();
         let mut render_state_init = XrRenderStateInit::new();
         render_state_init.base_layer(Some(&xr_gl_layer));
         xr_session.update_render_state_with_state(&render_state_init);
 
-        let mut session = session.borrow_mut();
-        session.replace(xr_session);
+        self.session.borrow_mut().replace(xr_session);
 
-        //    Ok(JsValue::from("Session set"))
 
-        start();
+        self.start();
     }
 
-    pub fn start(&self) {
+    fn start(&self) {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
@@ -147,7 +129,6 @@ pub impl XrApp {
         } else {
             return ();
         };
-
         request_animation_frame(sess, g.borrow().as_ref().unwrap());
     }
 }
