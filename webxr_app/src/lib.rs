@@ -1,3 +1,4 @@
+#[cfg(target_arch = "wasm32")]
 mod app;
 mod utils;
 
@@ -289,9 +290,11 @@ impl State {
 
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
 pub async fn run() {
-    println!("Xr Run!");
-    let a = crate::app::XrApp::new();
-    return a.init();    
+    #[cfg(target_arch = "wasm32")]
+    {
+        let a = app::XrApp::new();
+        return a.init().await;    
+    }
 }
 
 //#[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
