@@ -1,8 +1,10 @@
 #[cfg(target_arch = "wasm32")]
 mod app;
+#[cfg(target_arch = "wasm32")]
 mod utils;
 
-use wgpu::util::DeviceExt;
+use log::info;
+use wgpu::{util::DeviceExt, ColorTargetState};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -65,24 +67,132 @@ const VERTICES: &[Vertex] = &[
 
 const INDICES: &[u16] = &[0, 1, 4, 1, 2, 4, 2, 3, 4, /* padding */ 0];
 
-struct State {
-    surface: wgpu::Surface,
+struct RenderState {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
-    size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
+    format: wgpu::TextureFormat,
+}
+
+pub struct WindowState
+{
+    surface: wgpu::Surface,
+    config: wgpu::SurfaceConfiguration,
+    size: winit::dpi::PhysicalSize<u32>,
     cursor_pos: winit::dpi::PhysicalPosition<f64>,
     window: Window,
+}
+
+pub struct State {
+    render_state: RenderState,
+    window_state: Option<WindowState>,
+}
+
+fn create_redner_state(device: wgpu::Device, queue: wgpu::Queue, texture_format: wgpu::TextureFormat) -> RenderState
+{
+    let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+
+    let render_pipeline_layout =
+        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Render Pipeline Layout"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
+
+    let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("Render Pipeline"),
+        layout: Some(&render_pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: &shader,
+            entry_point: "vs_main",
+            buffers: &[Vertex::desc()],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &shader,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState {
+                format: texture_format,
+                blend: Some(wgpu::BlendState::REPLACE),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList,
+            strip_index_format: None,
+            front_face: wgpu::FrontFace::Ccw,
+            cull_mode: Some(wgpu::Face::Back),
+            // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
+            // or Features::POLYGON_MODE_POINT
+            polygon_mode: wgpu::PolygonMode::Fill,
+            // Requires Features::DEPTH_CLIP_CONTROL
+            unclipped_depth: false,
+            // Requires Features::CONSERVATIVE_RASTERIZATION
+            conservative: false,
+        },
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState {
+            count: 1,
+            mask: !0,
+            alpha_to_coverage_enabled: false,
+        },
+        // If the pipeline will be used with a multiview render pass, this
+        // indicates how many array layers the attachments will have.
+        multiview: None,
+    });
+
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(VERTICES),
+        usage: wgpu::BufferUsages::VERTEX,
+    });
+    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: bytemuck::cast_slice(INDICES),
+        usage: wgpu::BufferUsages::INDEX,
+    });
+
+    return RenderState { 
+        device,
+        queue, 
+        render_pipeline,
+        vertex_buffer,
+        index_buffer,
+        num_indices: INDICES.len() as u32,
+        format: texture_format
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+fn create_temp_window() -> Window {
+    let event_loop = EventLoop::new();
+    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    use winit::dpi::PhysicalSize;
+    // Set any non-zero window size
+    window.set_inner_size(PhysicalSize::new(200, 200));
+
+    // TODO: remove canvas from HTML when done?
+    {
+        use winit::platform::web::WindowExtWebSys;
+        web_sys::window()
+            .and_then(|win| win.document())
+            .and_then(|doc| {
+                let dst = doc.get_element_by_id("wasm-example")?;
+                let canvas = web_sys::Element::from(window.canvas());
+                dst.append_child(&canvas).ok()?;
+                Some(())
+            })
+            .expect("Couldn't append canvas to document body.");
+    }
+    window
 }
 
 impl State {
 
     // Creating some of the wgpu types requires async code
-    async fn new(window: Window) -> Self {
+    async fn new(window: Window, headless: bool) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -140,104 +250,37 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
-
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
-                push_constant_ranges: &[],
-            });
-
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("Render Pipeline"),
-            layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &shader,
-                entry_point: "vs_main",
-                buffers: &[Vertex::desc()],
-            },
-            fragment: Some(wgpu::FragmentState {
-                module: &shader,
-                entry_point: "fs_main",
-                targets: &[Some(wgpu::ColorTargetState {
-                    format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
-                // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
-                // or Features::POLYGON_MODE_POINT
-                polygon_mode: wgpu::PolygonMode::Fill,
-                // Requires Features::DEPTH_CLIP_CONTROL
-                unclipped_depth: false,
-                // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false,
-            },
-            depth_stencil: None,
-            multisample: wgpu::MultisampleState {
-                count: 1,
-                mask: !0,
-                alpha_to_coverage_enabled: false,
-            },
-            // If the pipeline will be used with a multiview render pass, this
-            // indicates how many array layers the attachments will have.
-            multiview: None,
-        });
-
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-        let num_indices = INDICES.len() as u32;
-
         let cursor_pos = winit::dpi::PhysicalPosition {x:0.0, y:0.0};
-        Self {
-            surface,
-            device,
-            queue,
-            config,
-            size,
-            render_pipeline,
-            vertex_buffer,
-            index_buffer,
-            num_indices,
 
-            cursor_pos,
-            window,
+        let render_state = create_redner_state(device, queue, config.format);
+        let window_state = if headless {None} else {Some(WindowState{window, surface, config, size, cursor_pos})};
+        Self {
+            render_state,
+            window_state
         }
     }
 
     pub fn window(&self) -> &Window {
-        &self.window
+        let window_state = self.window_state.as_ref().unwrap();
+        &window_state.window
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.size = new_size;
-            self.config.width = new_size.width;
-            self.config.height = new_size.height;
-            self.surface.configure(&self.device, &self.config);
+            let window_state = self.window_state.as_mut().unwrap();
+            window_state.size = new_size;
+            window_state.config.width = new_size.width;
+            window_state.config.height = new_size.height;
+            window_state.surface.configure(&self.render_state.device, &window_state.config);
         }
     }
-     
-
+    
     fn input(&mut self, event: &WindowEvent) -> bool {
 
         match event {
             WindowEvent::CursorMoved { position, ..} => {
-                self.cursor_pos = *position;
+                let window_state = self.window_state.as_mut().unwrap();
+                window_state.cursor_pos = *position;
             }
             _ => { return false }   
         }
@@ -245,13 +288,17 @@ impl State {
         return true
     }
 
-    fn update(&mut self) {
+    fn render_to_surface(&mut self) -> Result<(), wgpu::SurfaceError> {
+        let surface = &self.window_state.as_ref().unwrap().surface;
+        let output = surface.get_current_texture()?;
+        self.render_to_texture(&output.texture);
+        output.present();
+        Ok(())
     }
 
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let output = self.surface.get_current_texture()?;
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+    fn render_to_texture(&mut self, texture: &wgpu::Texture) {
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self.render_state.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
 
@@ -263,8 +310,8 @@ impl State {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: self.cursor_pos.x / self.size.width as f64, //0.1,
-                            g: self.cursor_pos.y / self.size.height as f64,
+                            r: 1.0,
+                            g: 0.0,
                             b: 0.0,
                             a: 1.0,
                         }),
@@ -274,40 +321,44 @@ impl State {
                 depth_stencil_attachment: None,
             });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            render_pass.set_pipeline(&self.render_state.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.render_state.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.render_state.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.render_state.num_indices, 0, 0..1);
         }
 
         // submit will accept anything that implements IntoIter
-        self.queue.submit(std::iter::once(encoder.finish()));
-        output.present();
-
-        Ok(())
+        self.render_state.queue.submit(Some(encoder.finish()));
     }
 }
 
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
-pub async fn run() {
+pub fn run() {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        env_logger::init();
+        pollster::block_on(run_windowed());
+    }
     #[cfg(target_arch = "wasm32")]
     {
-        let a = app::XrApp::new();
-        return a.init().await;    
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
+        wasm_bindgen_futures::spawn_local(run_headless());
     }
 }
 
-//#[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
-pub async fn run_old() {
+#[cfg(target_arch = "wasm32")]
+async fn run_headless() {
+    // Even in headless mode we need to create a temporary window and
+    // surface otherwise request_adapter will return None. 
+    // This issue seems specifc to wasm32 builds using WebGL
+    // (when specifying features = ["webgl"] for wgpu in Cargo.toml).
+    let state = State::new(create_temp_window(), true).await;
+    let a = app::XrApp::new(state);
+    a.init().await;    
+}
 
-    cfg_if::cfg_if! {
-        if #[cfg(target_arch = "wasm32")] {
-            std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-            console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
-        } else {
-            env_logger::init();
-        }
-    }
+async fn run_windowed() {
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
@@ -333,7 +384,7 @@ pub async fn run_old() {
     }
 
     // State::new uses async code, so we're going to wait for it to finish
-    let mut state = State::new(window).await;
+    let mut state = State::new(window, false).await;
 
     event_loop.run(move |event, _, control_flow| {
         match event {
@@ -366,12 +417,12 @@ pub async fn run_old() {
                 }
             }
             Event::RedrawRequested(window_id) if window_id == state.window().id() => {
-                state.update();
-                match state.render() {
+                match state.render_to_surface() {
                     Ok(_) => {}
                     // Reconfigure the surface if it's lost or outdated
                     Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        state.resize(state.size)
+                        let window_state = state.window_state.as_ref().unwrap();
+                        state.resize(window_state.size)
                     }
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,

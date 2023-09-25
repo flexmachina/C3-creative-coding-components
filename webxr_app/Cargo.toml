@@ -3,7 +3,7 @@ name = "webxr_app"
 version = "0.1.0"
 authors = ["Mayur Patel <mayurp@gmail.com>"]
 edition = "2018"
-#resolver = "2"
+resolver = "2"
 
 [dependencies]
 cfg-if = "1"
@@ -11,7 +11,6 @@ winit = "0.28"
 env_logger = "0.10"
 log = "0.4"
 wgpu = "0.17"
-wgpu-hal = "0.17.0"
 pollster = "0.3"
 bytemuck = { version = "1.12", features = [ "derive" ] }
 
@@ -19,23 +18,34 @@ bytemuck = { version = "1.12", features = [ "derive" ] }
 console_error_panic_hook = "0.1.6"
 console_log = "1.0"
 wgpu = { version = "0.17", features = ["webgl"]}
+wgpu-hal = { version = "0.17.0" }
+glow = "0.12.3"
 js-sys = "0.3.64"
 wasm-bindgen = "0.2.87"
 wasm-bindgen-futures = "0.4.37"
 
 web-sys = { version = "0.3.37", features = [
+  # STANDARD
+  'console',
   'Document',
-  'Window',
   'Element',
-  'Gpu',
   'Headers',
-  'HtmlCanvasElement',
   'Navigator',
+  'Window',
+  # IO
+  # 'Json',
   'Request',
   'RequestInit',
   'RequestMode',
   'Response',
+  # 'Url',
+  # WEBGL
+  'Gpu',
+  'HtmlCanvasElement',
   'WebGl2RenderingContext',
+  'WebGlFramebuffer',
+  ## XR
+  'DomPointReadOnly',
   'XrBoundedReferenceSpace',
   'XrEye',
   'XrFrame',
@@ -69,7 +79,6 @@ web-sys = { version = "0.3.37", features = [
   'XrWebGlLayer',
   'XrWebGlLayerInit',
   'XrSystem',
-  'console'
 ]}
 
 [lib]

@@ -55,25 +55,26 @@ pub fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsV
 pub struct XrApp {
     session: Rc<RefCell<Option<XrSession>>>,
     gl: Rc<WebGl2RenderingContext>,
+    state: Rc<RefCell<crate::State>>,
 }
 
 impl XrApp {
-    pub fn new() -> XrApp {
+    pub fn new(state: crate::State) -> Self {
         set_panic_hook();
 
         let session = Rc::new(RefCell::new(None));
-
         let xr_mode = true;
         let gl = Rc::new(create_webgl_context(xr_mode).unwrap());
 
-        XrApp { session, gl }
+        let state = Rc::new(RefCell::new(state));
+        Self { session, gl, state }
     }
 
     pub async fn init(&self) {
         log!("Starting WebXR...");
         let navigator: web_sys::Navigator = web_sys::window().unwrap().navigator();
         let xr = navigator.xr();
-        let session_mode = XrSessionMode::Inline;
+        let session_mode = XrSessionMode::ImmersiveVr;
         let session_supported_promise = xr.is_session_supported(session_mode);
 
         let supports_session =
@@ -103,20 +104,38 @@ impl XrApp {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let mut i = 0;
+        let state_p = self.state.clone();
+        let gl = self.gl.clone();
+
         *g.borrow_mut() = Some(Closure::new(move |_time: f64, frame: XrFrame| {
             log!("Frame rendering...");
-            if i > 2 {
-                log!("All done!");
-
-                // Drop our handle to this closure so that it will get cleaned
-                // up once we return.
-                let _ = f.borrow_mut().take();
-                return;
-            }
 
             let sess: XrSession = frame.session();
-            i += 1;
+            let mut state = state_p.borrow_mut();
+            let xr_gl_layer = sess.render_state().base_layer().unwrap();
+
+            let framebuffer = {
+                match xr_gl_layer.framebuffer() {
+                    // The division was valid
+                    Some(lfb) => {
+                        log!("Have layer fb!");
+                        lfb
+                    }
+                    None    => {
+                        log!("No layer fb, getting default one ");
+                        gl.get_parameter(WebGl2RenderingContext::FRAMEBUFFER_BINDING).unwrap().into()  
+                    }
+                }
+            };
+            
+            let texture = crate::utils::create_view_from_device_framebuffer(
+                &state.render_state.device,
+                framebuffer,
+                &xr_gl_layer,
+                state.render_state.format,
+                "device framebuffer (colour)");
+
+            state.render_to_texture(&texture);
 
             // Schedule ourself for another requestAnimationFrame callback.
             // TODO: WebXR Samples call this at top of request_animation_frame - should this be moved?
