@@ -1,5 +1,5 @@
 #[cfg(target_arch = "wasm32")]
-mod app;
+mod xr;
 #[cfg(target_arch = "wasm32")]
 mod utils;
 
@@ -339,20 +339,25 @@ impl State {
 pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     {
-        // TODO: allow running in windowed mode for desktop build for testing purposes
         env_logger::init();
         pollster::block_on(run_windowed());
     }
     #[cfg(target_arch = "wasm32")]
     {
-        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        utils::set_panic_hook();
         console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
-        wasm_bindgen_futures::spawn_local(run_headless());
+        use wasm_bindgen_futures::spawn_local;
+        const XR_MODE: bool = true;
+        if XR_MODE {
+            spawn_local(run_xr());
+        } else {
+            spawn_local(run_windowed());
+        }
     }
 }
 
 #[cfg(target_arch = "wasm32")]
-async fn run_headless() {
+async fn run_xr() {
     let state = {
         // Even in headless mode we need to create a temporary window and
         // surface otherwise request_adapter will return None. 
@@ -366,7 +371,7 @@ async fn run_headless() {
         setup_window_canvas(&temp_window);
         State::new(temp_window, true).await
     };
-    let a = app::XrApp::new(state);
+    let a = xr::XrApp::new(state);
     a.init().await;    
 }
 

@@ -1,20 +1,13 @@
 #![cfg(web_sys_unstable_apis)]
 
-//#[macro_use]
-
-use js_sys::{Object, Reflect};
+use log::{debug,info};
 use std::cell::RefCell;
 use std::rc::Rc;
-use crate::utils::set_panic_hook;
+
+use js_sys::{Object, Reflect};
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 
-// A macro to provide `println!(..)`-style syntax for `console.log` logging.
-macro_rules! log {
-    ( $( $t:tt )* ) => {
-        web_sys::console::log_1(&format!( $( $t )* ).into());
-    }
-}
 
 fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFrame)>) -> u32 {
     // This turns the Closure into a js_sys::Function
@@ -60,7 +53,6 @@ pub struct XrApp {
 
 impl XrApp {
     pub fn new(state: crate::State) -> Self {
-        set_panic_hook();
 
         let session = Rc::new(RefCell::new(None));
         let xr_mode = true;
@@ -71,7 +63,7 @@ impl XrApp {
     }
 
     pub async fn init(&self) {
-        log!("Starting WebXR...");
+        info!("Starting WebXR...");
         let navigator: web_sys::Navigator = web_sys::window().unwrap().navigator();
         let xr = navigator.xr();
         // XrSessionMode::ImmersiveVr results in nothing being
@@ -84,7 +76,7 @@ impl XrApp {
             wasm_bindgen_futures::JsFuture::from(session_supported_promise).await;
         let supports_session = supports_session.unwrap();
         if supports_session == false {
-            log!("XR session not supported");
+            info!("XR session not supported");
             return ();
         }
 
@@ -99,7 +91,6 @@ impl XrApp {
 
         self.session.borrow_mut().replace(xr_session);
 
-
         self.start();
     }
 
@@ -107,27 +98,27 @@ impl XrApp {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let state_p = self.state.clone();
+        let state = self.state.clone();
         let gl = self.gl.clone();
 
         *g.borrow_mut() = Some(Closure::new(move |_time: f64, frame: XrFrame| {
             let sess: XrSession = frame.session();
-            let mut state = state_p.borrow_mut();
+            let mut state = state.borrow_mut();
             let xr_gl_layer = sess.render_state().base_layer().unwrap();
 
             let framebuffer = {
                 match xr_gl_layer.framebuffer() {
                     Some(lfb) => {
-                        log!("Found XRWebGLLayer framebuffer!");
+                        debug!("Found XRWebGLLayer framebuffer!");
                         lfb
                     }
                     None    => {
-                        log!("XRWebGLLayer is null, using default one");
+                        debug!("XRWebGLLayer is null, using default one");
                         gl.get_parameter(WebGl2RenderingContext::FRAMEBUFFER_BINDING).unwrap().into()  
                     }
                 }
             };
-            
+
             let texture = crate::utils::create_view_from_device_framebuffer(
                 &state.render_state.device,
                 framebuffer,
