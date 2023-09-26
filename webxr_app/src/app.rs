@@ -74,7 +74,10 @@ impl XrApp {
         log!("Starting WebXR...");
         let navigator: web_sys::Navigator = web_sys::window().unwrap().navigator();
         let xr = navigator.xr();
-        let session_mode = XrSessionMode::ImmersiveVr;
+        // XrSessionMode::ImmersiveVr results in nothing being
+        // rendered.
+        // TODO: investigate 
+        let session_mode = XrSessionMode::Inline;
         let session_supported_promise = xr.is_session_supported(session_mode);
 
         let supports_session =
@@ -108,21 +111,18 @@ impl XrApp {
         let gl = self.gl.clone();
 
         *g.borrow_mut() = Some(Closure::new(move |_time: f64, frame: XrFrame| {
-            log!("Frame rendering...");
-
             let sess: XrSession = frame.session();
             let mut state = state_p.borrow_mut();
             let xr_gl_layer = sess.render_state().base_layer().unwrap();
 
             let framebuffer = {
                 match xr_gl_layer.framebuffer() {
-                    // The division was valid
                     Some(lfb) => {
-                        log!("Have layer fb!");
+                        log!("Found XRWebGLLayer framebuffer!");
                         lfb
                     }
                     None    => {
-                        log!("No layer fb, getting default one ");
+                        log!("XRWebGLLayer is null, using default one");
                         gl.get_parameter(WebGl2RenderingContext::FRAMEBUFFER_BINDING).unwrap().into()  
                     }
                 }

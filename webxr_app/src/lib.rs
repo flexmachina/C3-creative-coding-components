@@ -3,8 +3,7 @@ mod app;
 #[cfg(target_arch = "wasm32")]
 mod utils;
 
-use log::info;
-use wgpu::{util::DeviceExt, ColorTargetState};
+use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -169,24 +168,28 @@ fn create_redner_state(device: wgpu::Device, queue: wgpu::Queue, texture_format:
 fn create_temp_window() -> Window {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
-    use winit::dpi::PhysicalSize;
-    // Set any non-zero window size
-    window.set_inner_size(PhysicalSize::new(200, 200));
-
-    // TODO: remove canvas from HTML when done?
-    {
-        use winit::platform::web::WindowExtWebSys;
-        web_sys::window()
-            .and_then(|win| win.document())
-            .and_then(|doc| {
-                let dst = doc.get_element_by_id("wasm-example")?;
-                let canvas = web_sys::Element::from(window.canvas());
-                dst.append_child(&canvas).ok()?;
-                Some(())
-            })
-            .expect("Couldn't append canvas to document body.");
-    }
     window
+}
+
+#[cfg(target_arch = "wasm32")]
+fn setup_window_canvas(window: &Window) {
+
+    // Winit prevents sizing with CSS, so we have to set
+    // the size manually when on web.
+    use winit::dpi::PhysicalSize;
+    window.set_inner_size(PhysicalSize::new(450, 400));
+
+    use winit::platform::web::WindowExtWebSys;
+    web_sys::window()
+        .and_then(|win| win.document())
+        .and_then(|doc| {
+            let dst = doc.get_element_by_id("wasm-example")?;
+            let canvas = web_sys::Element::from(window.canvas());
+            canvas.set_id("canvas");
+            dst.append_child(&canvas).ok()?;
+            Some(())
+        })
+        .expect("Couldn't append canvas to document body.");
 }
 
 impl State {
@@ -336,6 +339,7 @@ impl State {
 pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     {
+        // TODO: allow running in windowed mode for desktop build for testing purposes
         env_logger::init();
         pollster::block_on(run_windowed());
     }
@@ -349,11 +353,19 @@ pub fn run() {
 
 #[cfg(target_arch = "wasm32")]
 async fn run_headless() {
-    // Even in headless mode we need to create a temporary window and
-    // surface otherwise request_adapter will return None. 
-    // This issue seems specifc to wasm32 builds using WebGL
-    // (when specifying features = ["webgl"] for wgpu in Cargo.toml).
-    let state = State::new(create_temp_window(), true).await;
+    let state = {
+        // Even in headless mode we need to create a temporary window and
+        // surface otherwise request_adapter will return None. 
+        // This issue seems specifc to wasm32 builds using WebGL
+        // (when specifying features = ["webgl"] for wgpu in Cargo.toml).
+        let temp_window = create_temp_window();
+        // In addition, web builds require the window's canvas to be added to
+        // the HTML document otherwise WebGL initialization will fail.
+        // It doesn't seem to matter that the window is destroyed after
+        // the end of this scope
+        setup_window_canvas(&temp_window);
+        State::new(temp_window, true).await
+    };
     let a = app::XrApp::new(state);
     a.init().await;    
 }
@@ -366,21 +378,7 @@ async fn run_windowed() {
     // Window setup...
     #[cfg(target_arch = "wasm32")]
     {
-        // Winit prevents sizing with CSS, so we have to set
-        // the size manually when on web.
-        use winit::dpi::PhysicalSize;
-        window.set_inner_size(PhysicalSize::new(450, 400));
-
-        use winit::platform::web::WindowExtWebSys;
-        web_sys::window()
-            .and_then(|win| win.document())
-            .and_then(|doc| {
-                let dst = doc.get_element_by_id("wasm-example")?;
-                let canvas = web_sys::Element::from(window.canvas());
-                dst.append_child(&canvas).ok()?;
-                Some(())
-            })
-            .expect("Couldn't append canvas to document body.");
+        setup_window_canvas(&window);
     }
 
     // State::new uses async code, so we're going to wait for it to finish
