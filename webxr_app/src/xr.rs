@@ -123,7 +123,7 @@ impl XrApp {
                 &state.render_state.device,
                 framebuffer,
                 &xr_gl_layer,
-                state.render_state.format,
+                state.render_state.color_format,
                 "device framebuffer (colour)");
 
             state.render_to_texture(&texture);
