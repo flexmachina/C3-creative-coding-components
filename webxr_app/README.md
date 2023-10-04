@@ -13,12 +13,12 @@ There are a few different ways to build to app.
 > RUSTFLAGS=--cfg=web_sys_unstable_apis wasm-pack build --debug --target web
 ```
 
-2. Run a webserver serving this directory.
+2. Run a webserver serving this directory. Use `-p` to change the port.
 ```
 > ./webserver.py
 ```
 
-3. Luanch a web browser at `localhost:8000`
+3. Launch a web browser at `localhost:8000`
 
 
 ## Normal wasm
