@@ -375,13 +375,17 @@ impl State {
     fn render_to_surface(&mut self) -> Result<(), wgpu::SurfaceError> {
         let surface = &self.window_state.as_ref().unwrap().surface;
         let output = surface.get_current_texture()?;
-        self.render_to_texture(&output.texture);
+        self.render_to_texture(&output.texture, None);
         output.present();
         Ok(())
     }
 
-    fn render_to_texture(&mut self, texture: &wgpu::Texture) {
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>) {
+        let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let depth_view = match depth_texture {
+            Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
+            _ => self.render_state.depth_texture.texture.create_view(&wgpu::TextureViewDescriptor::default())
+        };
         let mut encoder = self.render_state.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
@@ -390,7 +394,7 @@ impl State {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view: &color_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
@@ -403,7 +407,7 @@ impl State {
                     },
                 })],
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &self.render_state.depth_texture.view,
+                    view: &depth_view,
                     depth_ops: Some(wgpu::Operations {
                         load: wgpu::LoadOp::Clear(1.0),
                         store: true,

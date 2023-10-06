@@ -119,14 +119,21 @@ impl XrApp {
                 }
             };
 
-            let texture = crate::utils::create_view_from_device_framebuffer(
+            let color_texture = crate::utils::create_view_from_device_framebuffer(
                 &state.render_state.device,
-                framebuffer,
+                framebuffer.clone(),
                 &xr_gl_layer,
                 state.render_state.color_format,
                 "device framebuffer (colour)");
 
-            state.render_to_texture(&texture);
+            let depth_texture = crate::utils::create_view_from_device_framebuffer(
+                &state.render_state.device,
+                framebuffer,
+                &xr_gl_layer,
+                crate::texture::Texture::DEPTH_FORMAT,
+                "device framebuffer (depth)");
+        
+            state.render_to_texture(&color_texture, Some(&depth_texture));
 
             // Schedule ourself for another requestAnimationFrame callback.
             // TODO: WebXR Samples call this at top of request_animation_frame - should this be moved?
