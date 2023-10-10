@@ -125,10 +125,10 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     window: Window,
     render_pipeline: wgpu::RenderPipeline,
-    vertex_buffer: wgpu::Buffer,
-    //num_vertices: u32,
-    num_indices: u32,
-    index_buffer: wgpu::Buffer,
+    obj_model: model::Model,
+    //vertex_buffer: wgpu::Buffer,
+    //num_indices: u32,
+    //index_buffer: wgpu::Buffer,
     diffuse_bind_group: wgpu::BindGroup,
     camera: Camera,
     camera_uniform: CameraUniform,
@@ -206,6 +206,8 @@ impl State {
         };
         surface.configure(&device, &config);
 
+
+
         let diffuse_bytes = include_bytes!("happy-tree.png");
         let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy-tree.png").unwrap();
 
@@ -255,25 +257,35 @@ impl State {
 
 
 
+        let obj_model =
+            resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout)
+            .await
+            .unwrap();
+
+
         const NUM_INSTANCES_PER_ROW: u32 = 10;
-        const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
+        const SPACE_BETWEEN: f32 = 3.0;
         let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
-                    (0..NUM_INSTANCES_PER_ROW).map(move |x| {
-                        let position = cgmath::Vector3 { x: x as f32, y: 0.0, z: z as f32 } - INSTANCE_DISPLACEMENT;
+            (0..NUM_INSTANCES_PER_ROW).map(move |x| {
+                let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+                let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
 
-                        let rotation = if position.is_zero() {
-                            // this is needed so an object at (0, 0, 0) won't get scaled to zero
-                            // as Quaternions can effect scale if they're not created correctly
-                            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0))
-                        } else {
-                            cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
-                        };
+                let position = cgmath::Vector3 { x, y: 0.0, z };
 
-                        Instance {
-                            position, rotation,
-                        }
-                    })
-                }).collect::<Vec<_>>();
+                let rotation = if position.is_zero() {
+                    cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0))
+                } else {
+                    cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+                };
+
+                Instance {
+                    position, rotation,
+                }
+            })
+        }).collect::<Vec<_>>();
+
+
+
 
         let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
         let instance_buffer = device.create_buffer_init(
@@ -439,9 +451,10 @@ impl State {
             config,
             size,
             render_pipeline,
-            vertex_buffer,
-            index_buffer,
-            num_indices,
+            obj_model,
+            //vertex_buffer,
+            //index_buffer,
+            //num_indices,
             //num_vertices,
             diffuse_bind_group,
             camera,
@@ -516,14 +529,21 @@ impl State {
             });
 
             // NEW!
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_pipeline(&self.render_pipeline); // 2.
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
+       
+            use model::DrawModel;
+            render_pass.draw_mesh_instanced(&self.obj_model.meshes[0], 
+                                            0..self.instances.len() as u32);
+
+            //render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            //render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // 1.
             //render_pass.draw(0..self.num_vertices, 0..1); // 3.
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
+            //render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
+        
+
         }
 
         // submit will accept anything that implements IntoIter
