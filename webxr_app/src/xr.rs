@@ -1,6 +1,6 @@
 #![cfg(web_sys_unstable_apis)]
 
-use log::{debug,info};
+use log::{debug,error,info};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -13,6 +13,19 @@ fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFra
     // This turns the Closure into a js_sys::Function
     // See https://rustwasm.github.io/wasm-bindgen/api/wasm_bindgen/closure/struct.Closure.html#casting-a-closure-to-a-js_sysfunction
     session.request_animation_frame(f.as_ref().unchecked_ref())
+}
+
+// This is straightforward because:
+// * WebGL matrices are stored as an array in column-major order
+// * cgmath::Matrix4::new args are also in column-major order
+//https://developer.mozilla.org/en-US/docs/Web/API/XRRigidTransform/matrix
+fn to_mat(v: &Vec<f32>) -> cgmath::Matrix4<f32> {
+    cgmath::Matrix4::new(
+        v[0],  v[1],  v[2],  v[3],
+        v[4],  v[5],  v[6],  v[7],
+        v[8],  v[9],  v[10], v[11],
+        v[12], v[13], v[14], v[15],
+    )
 }
 
 pub fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsValue> {
@@ -47,6 +60,7 @@ pub fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsV
 
 pub struct XrApp {
     session: Rc<RefCell<Option<XrSession>>>,
+    ref_space: Rc<RefCell<Option<XrReferenceSpace>>>,
     gl: Rc<WebGl2RenderingContext>,
     state: Rc<RefCell<crate::State>>,
 }
@@ -55,21 +69,21 @@ impl XrApp {
     pub fn new(state: crate::State) -> Self {
 
         let session = Rc::new(RefCell::new(None));
+        let ref_space = Rc::new(RefCell::new(None));
         let xr_mode = true;
         let gl = Rc::new(create_webgl_context(xr_mode).unwrap());
 
         let state = Rc::new(RefCell::new(state));
-        Self { session, gl, state }
+        Self { session, ref_space, gl, state }
     }
 
     pub async fn init(&self) {
         info!("Starting WebXR...");
         let navigator: web_sys::Navigator = web_sys::window().unwrap().navigator();
         let xr = navigator.xr();
-        // XrSessionMode::ImmersiveVr results in nothing being
-        // rendered.
-        // TODO: investigate 
-        let session_mode = XrSessionMode::Inline;
+        // XrSessionMode::ImmersiveVr seems work now
+        // TODO: make this configurable
+        let session_mode = XrSessionMode::ImmersiveVr;
         let session_supported_promise = xr.is_session_supported(session_mode);
 
         let supports_session =
@@ -84,12 +98,22 @@ impl XrApp {
         let xr_session = wasm_bindgen_futures::JsFuture::from(xr_session_promise).await;
         let xr_session: XrSession = xr_session.unwrap().into();
 
+        // TODO need to use right ref_space depending on  session mode
+        //let ref_space_type = if xr_session.is_immersive() {XrReferenceSpaceType::Local} else  {XrReferenceSpaceType::Viewer};        
+        let ref_space_type = XrReferenceSpaceType::Local;
+        
+        // Since we're dealing with multiple sessions now we need to track
+
         let xr_gl_layer = XrWebGlLayer::new_with_web_gl2_rendering_context(&xr_session, &self.gl).unwrap();
         let mut render_state_init = XrRenderStateInit::new();
         render_state_init.base_layer(Some(&xr_gl_layer));
         xr_session.update_render_state_with_state(&render_state_init);
 
+        let ref_space_promise = xr_session.request_reference_space(ref_space_type);
+        let ref_space = wasm_bindgen_futures::JsFuture::from(ref_space_promise).await;
+        let ref_space: XrReferenceSpace = ref_space.unwrap().into();
         self.session.borrow_mut().replace(xr_session);
+        self.ref_space.borrow_mut().replace(ref_space);
 
         self.start();
     }
@@ -100,10 +124,14 @@ impl XrApp {
 
         let state = self.state.clone();
         let gl = self.gl.clone();
+        let ref_space = self.ref_space.clone();
 
         *g.borrow_mut() = Some(Closure::new(move |_time: f64, frame: XrFrame| {
             let sess: XrSession = frame.session();
             let mut state = state.borrow_mut();
+            let mut ref_space = ref_space.borrow_mut();
+            let mut ref_space = ref_space.as_ref().unwrap();
+
             let xr_gl_layer = sess.render_state().base_layer().unwrap();
 
             let framebuffer = {
@@ -133,7 +161,22 @@ impl XrApp {
                 crate::texture::Texture::DEPTH_FORMAT,
                 "device framebuffer (depth)");
         
-            state.render_to_texture(&color_texture, Some(&depth_texture));
+            let viewer_pose = frame.get_viewer_pose(&ref_space).unwrap();
+            for view in viewer_pose.views() {
+                i = i+1;
+                let view: XrView = view.into();
+                let viewport = xr_gl_layer.get_viewport(&view).unwrap();
+                //gl.viewport(viewport.x(), viewport.y(), viewport.width(), viewport.height());
+                let vp = crate::Rect { 
+                    x: viewport.x() as f32, 
+                    y: viewport.y() as f32, 
+                    w: viewport.width() as f32, 
+                    h: viewport.height() as f32
+                };
+                
+                state.update_camera_mats(&to_mat(&view.transform().matrix()), &to_mat(&view.projection_matrix()));
+                state.render_to_texture(&color_texture, Some(&depth_texture), Some(vp));
+            }
 
             // Schedule ourself for another requestAnimationFrame callback.
             // TODO: WebXR Samples call this at top of request_animation_frame - should this be moved?

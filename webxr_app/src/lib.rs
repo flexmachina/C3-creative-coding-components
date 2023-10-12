@@ -92,6 +92,12 @@ pub struct WindowState
     window: Window,
 }
 
+pub struct Rect {
+    x: f32,
+    y: f32,
+    w: f32,
+    h: f32
+}
 pub struct State {
     render_state: RenderState,
     window_state: Option<WindowState>
@@ -365,6 +371,15 @@ impl State {
         self.render_state.camera_state.camera_controller.update_camera(&mut self.render_state.camera_state.camera, dt);
         self.render_state.camera_state.camera_uniform
             .update_view_proj(&self.render_state.camera_state.camera, &self.render_state.camera_state.projection);
+        self.update_camera_buffer();
+    }
+
+    fn update_camera_mats(&mut self, view : &cgmath::Matrix4<f32>, projection: &cgmath::Matrix4<f32>) {
+        self.render_state.camera_state.camera_uniform.update_view_proj_mats(&view, &projection);
+        self.update_camera_buffer();
+    }
+
+    fn update_camera_buffer(&mut self) {
         self.render_state.queue.write_buffer(
             &self.render_state.camera_state.camera_buffer,
             0,
@@ -375,12 +390,12 @@ impl State {
     fn render_to_surface(&mut self) -> Result<(), wgpu::SurfaceError> {
         let surface = &self.window_state.as_ref().unwrap().surface;
         let output = surface.get_current_texture()?;
-        self.render_to_texture(&output.texture, None);
+        self.render_to_texture(&output.texture, None, None);
         output.present();
         Ok(())
     }
 
-    fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>) {
+    fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>, viewport: Option<Rect>) {
         let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let depth_view = match depth_texture {
             Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
@@ -415,6 +430,11 @@ impl State {
                     stencil_ops: None,
                 }),
             });
+
+            match viewport {
+                Some(v) => { render_pass.set_viewport(v.x, v.y, v.w, v.h, 0.0, 1.0); }
+                _ => {}
+            };
 
             render_pass.set_pipeline(&self.render_state.render_pipeline);
             render_pass.set_bind_group(0, &self.render_state.camera_state.camera_bind_group, &[]);

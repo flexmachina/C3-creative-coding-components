@@ -1,5 +1,5 @@
 use cgmath::*;
-use log::{debug,info};
+use log::{debug,error,info};
 use std::f32::consts::FRAC_PI_2;
 use std::time::Duration;
 use winit::dpi::PhysicalPosition;
@@ -16,6 +16,15 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 );
 
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
+
+fn lhs_to_rhs_view(l: &cgmath::Matrix4<f32>) -> cgmath::Matrix4<f32> {
+    let mut r = l.clone();
+    // Based on http://perry.cz/articles/ProjectionMatrix.xhtml
+    // TOOD: FIX
+    error!("{:?}", r);
+    r
+}
+
 
 #[derive(Debug)]
 pub struct Camera {
@@ -214,9 +223,12 @@ impl CameraUniform {
         }
     }
 
-    // UPDATED!
     pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
         self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into()
+    }
+
+    pub fn update_view_proj_mats(&mut self, view: &Matrix4<f32>, projection: &Matrix4<f32>) {
+        self.view_proj = (OPENGL_TO_WGPU_MATRIX * projection * lhs_to_rhs_view(view)).into();
     }
 }
 
