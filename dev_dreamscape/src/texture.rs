@@ -1,5 +1,6 @@
 use crate::assets::load_binary;
 use crate::device::Device;
+use wgpu::util::DeviceExt;
 use anyhow::*;
 use bevy_ecs::prelude::Resource;
 use image::GenericImageView;

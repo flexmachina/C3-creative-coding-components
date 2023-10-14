@@ -62,11 +62,11 @@ impl Device {
             let caps = surface.get_capabilities(&adapter);
 
             let format = caps
-                .formats
-                .iter()
+                .formats.iter()
                 .copied()
-                .find(|f| f.describe().srgb)
+                .find(|f| f.is_srgb())            
                 .unwrap_or(caps.formats[0]);
+
 
             wgpu::SurfaceConfiguration {
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
