@@ -1,5 +1,5 @@
 use cgmath::*;
-use log::{debug,error,info};
+use log::{error};
 use std::f32::consts::FRAC_PI_2;
 use std::time::Duration;
 use winit::dpi::PhysicalPosition;
@@ -18,11 +18,15 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
 fn lhs_to_rhs_view(l: &cgmath::Matrix4<f32>) -> cgmath::Matrix4<f32> {
-    let mut r = l.clone();
-    // Based on http://perry.cz/articles/ProjectionMatrix.xhtml
-    // TOOD: FIX
-    error!("{:?}", r);
-    r
+    // TOOD: Fix as this currently results in the camera being upside down,
+    // and being in mirrored position on the XZ plane in WebXR mode.
+    // Possibly look at http://perry.cz/articles/ProjectionMatrix.xhtml
+    Matrix4::look_to_rh(
+        Point3::new(-l.w.x, -l.w.y, -l.w.z),
+        Vector3::new(l.z.x, l.z.y, l.z.z),
+        Vector3::new(l.y.x, l.y.y, l.y.z),
+    )
+    //error!("{:?}", r);
 }
 
 
@@ -213,21 +217,25 @@ impl CameraController {
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CameraUniform {
+    view_position: [f32; 4],
     view_proj: [[f32; 4]; 4],
 }
 
 impl CameraUniform {
     fn new() -> Self {
         Self {
+            view_position: [0.0; 4],
             view_proj: cgmath::Matrix4::identity().into(),
         }
     }
 
     pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
+        self.view_position = camera.position.to_homogeneous().into();
         self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into()
     }
 
     pub fn update_view_proj_mats(&mut self, view: &Matrix4<f32>, projection: &Matrix4<f32>) {
+        // TODO update self.view_position?
         self.view_proj = (OPENGL_TO_WGPU_MATRIX * projection * lhs_to_rhs_view(view)).into();
     }
 }

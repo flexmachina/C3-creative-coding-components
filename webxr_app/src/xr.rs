@@ -129,8 +129,8 @@ impl XrApp {
         *g.borrow_mut() = Some(Closure::new(move |_time: f64, frame: XrFrame| {
             let sess: XrSession = frame.session();
             let mut state = state.borrow_mut();
-            let mut ref_space = ref_space.borrow_mut();
-            let mut ref_space = ref_space.as_ref().unwrap();
+            let ref_space = ref_space.borrow_mut();
+            let ref_space = ref_space.as_ref().unwrap();
 
             let xr_gl_layer = sess.render_state().base_layer().unwrap();
 
@@ -162,8 +162,7 @@ impl XrApp {
                 "device framebuffer (depth)");
         
             let viewer_pose = frame.get_viewer_pose(&ref_space).unwrap();
-            for view in viewer_pose.views() {
-                i = i+1;
+            for (view_idx, view) in viewer_pose.views().iter().enumerate() {
                 let view: XrView = view.into();
                 let viewport = xr_gl_layer.get_viewport(&view).unwrap();
                 //gl.viewport(viewport.x(), viewport.y(), viewport.width(), viewport.height());
@@ -173,9 +172,12 @@ impl XrApp {
                     w: viewport.width() as f32, 
                     h: viewport.height() as f32
                 };
-                
+
                 state.update_camera_mats(&to_mat(&view.transform().matrix()), &to_mat(&view.projection_matrix()));
-                state.render_to_texture(&color_texture, Some(&depth_texture), Some(vp));
+                // Each view is rendered to a different region of the same framebuffer,
+                // so only clear the framebuffer once before the first render pass.
+                let clear = view_idx == 0;
+                state.render_to_texture(&color_texture, Some(&depth_texture), Some(vp), clear);
             }
 
             // Schedule ourself for another requestAnimationFrame callback.
