@@ -582,12 +582,31 @@ impl State {
     }
 
     fn update(&mut self, dt: std::time::Duration) {
-        // UPDATED!
+        // Update camera
         self.render_state.camera_state.camera_controller.update_camera(&mut self.render_state.camera_state.camera, dt);
         self.render_state.camera_state.camera_uniform
             .update_view_proj(&self.render_state.camera_state.camera, &self.render_state.camera_state.projection);
         self.update_camera_buffer();
+        
+        self.update_scene(dt);
+    }
 
+    fn update_camera_mats(&mut self, view : &cgmath::Matrix4<f32>, projection: &cgmath::Matrix4<f32>) {
+        // Directly update camera matrices
+        // Only for use with WebXR
+        self.render_state.camera_state.camera_uniform.update_view_proj_mats(&view, &projection);
+        self.update_camera_buffer();
+    }
+
+    fn update_camera_buffer(&mut self) {
+        self.render_state.queue.write_buffer(
+            &self.render_state.camera_state.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[self.render_state.camera_state.camera_uniform]),
+        );
+    }
+
+    fn update_scene(&mut self, dt: std::time::Duration) {
         // Update the light
         let old_position: cgmath::Vector3<_> = self.render_state.light_uniform.position.into();
         self.render_state.light_uniform.position =
@@ -598,19 +617,6 @@ impl State {
             &self.render_state.light_buffer,
             0,
             bytemuck::cast_slice(&[self.render_state.light_uniform]),
-        );
-    }
-
-    fn update_camera_mats(&mut self, view : &cgmath::Matrix4<f32>, projection: &cgmath::Matrix4<f32>) {
-        self.render_state.camera_state.camera_uniform.update_view_proj_mats(&view, &projection);
-        self.update_camera_buffer();
-    }
-
-    fn update_camera_buffer(&mut self) {
-        self.render_state.queue.write_buffer(
-            &self.render_state.camera_state.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[self.render_state.camera_state.camera_uniform]),
         );
     }
 

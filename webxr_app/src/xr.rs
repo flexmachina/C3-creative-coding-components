@@ -125,8 +125,9 @@ impl XrApp {
         let state = self.state.clone();
         let gl = self.gl.clone();
         let ref_space = self.ref_space.clone();
+        let last_frame_time = Rc::new(RefCell::new(0.));
 
-        *g.borrow_mut() = Some(Closure::new(move |_time: f64, frame: XrFrame| {
+        *g.borrow_mut() = Some(Closure::new(move | time: f64, frame: XrFrame| {
             let sess: XrSession = frame.session();
             let mut state = state.borrow_mut();
             let ref_space = ref_space.borrow_mut();
@@ -174,6 +175,11 @@ impl XrApp {
                 };
 
                 state.update_camera_mats(&to_mat(&view.transform().matrix()), &to_mat(&view.projection_matrix()));
+
+                let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
+                last_frame_time.replace(time);
+                state.update_scene(delta_time);
+
                 // Each view is rendered to a different region of the same framebuffer,
                 // so only clear the framebuffer once before the first render pass.
                 let clear = view_idx == 0;
