@@ -15,18 +15,25 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
+#[rustfmt::skip]
+pub const ROTZ_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
+    -1.0,  0.0, 0.0, 0.0,
+     0.0, -1.0, 0.0, 0.0,
+     0.0,  0.0, 1.0, 0.0,
+     0.0,  0.0, 0.0, 1.0,
+);
+
+
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
 fn lhs_to_rhs_view(l: &cgmath::Matrix4<f32>) -> cgmath::Matrix4<f32> {
-    // TOOD: Fix as this currently results in the camera being upside down,
-    // and being in mirrored position on the XZ plane in WebXR mode.
-    // Possibly look at http://perry.cz/articles/ProjectionMatrix.xhtml
-    Matrix4::look_to_rh(
+    let view = Matrix4::look_to_rh(
         Point3::new(-l.w.x, -l.w.y, -l.w.z),
         Vector3::new(l.z.x, l.z.y, l.z.z),
         Vector3::new(l.y.x, l.y.y, l.y.z),
-    )
-    //error!("{:?}", r);
+    );
+    // For some reason the the camera ends up upside down, so rotate 180 around the Z axis
+    view * ROTZ_MATRIX
 }
 
 
