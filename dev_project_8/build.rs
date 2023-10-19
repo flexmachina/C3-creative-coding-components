@@ -14,6 +14,8 @@ fn main() -> Result<()> {
     paths_to_copy.push("res/");
     copy_items(&paths_to_copy, out_dir, &copy_options)?;
 
+    let out_dir2 = env::var("OUT_DIR")?;
+    println!("OUT_DIR {}",&out_dir2);
     Ok(())
 }
 

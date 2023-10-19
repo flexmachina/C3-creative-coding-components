@@ -1,7 +1,7 @@
 //use crate::debug_ui::DebugUI;
 use crate::device::{Device, SurfaceSize};
 use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent};
-//use crate::frame_time::FrameTime;
+use crate::frame_time::FrameTime;
 use crate::input::Input;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
@@ -33,7 +33,7 @@ pub fn init_app(world: &mut World) {
         running: true,
     });
     world.insert_resource(device);
-    //world.insert_resource(FrameTime::new());
+    world.insert_resource(FrameTime::new());
     world.insert_resource(Input::new());
     world.insert_resource(PhysicsWorld::new());
 }

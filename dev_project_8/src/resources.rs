@@ -29,6 +29,8 @@ pub async fn load_string(file_name: &str) -> anyhow::Result<String> {
             let path = std::path::Path::new(env!("OUT_DIR"))
                 .join("res")
                 .join(file_name);
+            let os_str = path.clone().into_os_string();
+            println!("shader runtime path {:?}", os_str);
             let txt = std::fs::read_to_string(path)?;
         }
     }

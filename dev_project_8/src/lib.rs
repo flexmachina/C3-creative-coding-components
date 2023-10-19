@@ -361,11 +361,11 @@ impl State {
         let camera_controller = CameraController::new(0.2);
 
 
-
+        let src = resources::load_string("shader.wgsl").await.unwrap();
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(src.into()),
         });
 
         let render_pipeline_layout =
