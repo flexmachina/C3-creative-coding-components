@@ -1,8 +1,8 @@
 mod camera;
-//mod floor_box;
+mod floor_box;
 //mod free_box;
 mod mesh_renderer;
-//mod physics_body;
+mod physics_body;
 mod player;
 mod post_processor;
 mod render_order;
@@ -12,10 +12,10 @@ mod transform;
 //mod grab;
 
 pub use camera::Camera;
-//pub use floor_box::FloorBox;
+pub use floor_box::FloorBox;
 //pub use free_box::FreeBox;
 pub use mesh_renderer::{MeshRenderer, ShaderVariant};
-//pub use physics_body::{PhysicsBody, PhysicsBodyParams};
+pub use physics_body::{PhysicsBody, PhysicsBodyParams};
 pub use player::Player;
 pub use post_processor::PostProcessor;
 pub use render_order::RenderOrder;
