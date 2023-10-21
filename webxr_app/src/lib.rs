@@ -610,8 +610,10 @@ impl State {
     fn update_scene(&mut self, dt: std::time::Duration) {
         // Update the light
         let old_position: cgmath::Vector3<_> = self.render_state.light_uniform.position.into();
+        let deg_per_sec = 90.;
+        let deg = cgmath::Deg(deg_per_sec * dt.as_secs_f32());
         self.render_state.light_uniform.position =
-            (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0))
+            (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
                 * old_position)
                 .into();
         self.render_state.queue.write_buffer(
