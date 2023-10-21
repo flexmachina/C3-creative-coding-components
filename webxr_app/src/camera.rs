@@ -1,4 +1,5 @@
 use cgmath::*;
+#[allow(unused_imports)]
 use log::{error};
 use std::f32::consts::FRAC_PI_2;
 use std::time::Duration;
@@ -15,6 +16,7 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
+#[cfg(target_arch = "wasm32")]
 #[rustfmt::skip]
 pub const ROTZ_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     -1.0,  0.0, 0.0, 0.0,
@@ -26,6 +28,7 @@ pub const ROTZ_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
+#[cfg(target_arch = "wasm32")]
 fn lhs_to_rhs_view(l: &cgmath::Matrix4<f32>) -> cgmath::Matrix4<f32> {
     let view = Matrix4::look_to_rh(
         Point3::new(-l.w.x, -l.w.y, -l.w.z),
@@ -241,6 +244,7 @@ impl CameraUniform {
         self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into()
     }
 
+    #[cfg(target_arch = "wasm32")]
     pub fn update_view_proj_mats(&mut self, view: &Matrix4<f32>, projection: &Matrix4<f32>) {
         // TODO update self.view_position?
         self.view_proj = (OPENGL_TO_WGPU_MATRIX * projection * lhs_to_rhs_view(view)).into();

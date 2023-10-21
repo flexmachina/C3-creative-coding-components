@@ -11,6 +11,7 @@ use camera::CameraState;
 use model::{DrawLight, DrawModel, Vertex};
 
 use cgmath::prelude::*;
+#[allow(unused_imports)]
 use log::{debug,info};
 use wgpu::util::DeviceExt;
 use winit::{
@@ -118,6 +119,7 @@ struct RenderState {
     device: wgpu::Device,
     queue: wgpu::Queue,
     render_pipeline: wgpu::RenderPipeline,
+    #[allow(dead_code)]
     color_format: wgpu::TextureFormat,
     depth_texture: texture::Texture,
     camera_state: CameraState,
@@ -139,6 +141,7 @@ pub struct WindowState
     surface: wgpu::Surface,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
+    #[allow(dead_code)]
     cursor_pos: winit::dpi::PhysicalPosition<f64>,
     mouse_pressed: bool,
     window: Window,
@@ -592,6 +595,7 @@ impl State {
         self.update_scene(dt);
     }
 
+    #[cfg(target_arch = "wasm32")]
     fn update_camera_mats(&mut self, view : &cgmath::Matrix4<f32>, projection: &cgmath::Matrix4<f32>) {
         // Directly update camera matrices
         // Only for use with WebXR

@@ -1,5 +1,6 @@
 #![cfg(web_sys_unstable_apis)]
 
+#[allow(unused_imports)]
 use log::{debug,error,info};
 use std::cell::RefCell;
 use std::rc::Rc;
