@@ -165,6 +165,7 @@ fn create_render_pipeline(
     depth_format: Option<wgpu::TextureFormat>,
     vertex_layouts: &[wgpu::VertexBufferLayout],
     shader: wgpu::ShaderModuleDescriptor,
+    webxr: bool
 ) -> wgpu::RenderPipeline {
     let shader = device.create_shader_module(shader);
 
@@ -188,7 +189,7 @@ fn create_render_pipeline(
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleList,
             strip_index_format: None,
-            front_face: wgpu::FrontFace::Ccw,
+            front_face: if webxr {wgpu::FrontFace::Cw} else {wgpu::FrontFace::Ccw},
             cull_mode: Some(wgpu::Face::Back),
             // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
             // or Features::POLYGON_MODE_POINT
@@ -221,7 +222,8 @@ async fn create_redner_state(
     queue: wgpu::Queue,
     color_format: wgpu::TextureFormat,
     width: u32,
-    height: u32) -> RenderState
+    height: u32,
+    webxr: bool) -> RenderState
 {
     let texture_bind_group_layout =
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -394,6 +396,7 @@ async fn create_redner_state(
             Some(texture::Texture::DEPTH_FORMAT),
             &[model::ModelVertex::desc(), InstanceRaw::desc()],
             shader,
+            webxr
         )
     };
 
@@ -414,6 +417,7 @@ async fn create_redner_state(
             Some(texture::Texture::DEPTH_FORMAT),
             &[model::ModelVertex::desc()],
             shader,
+            webxr
         )
     };
 
@@ -469,7 +473,7 @@ fn setup_window_canvas(window: &Window) {
 impl State {
 
     // Creating some of the wgpu types requires async code
-    async fn new(window: Window, headless: bool) -> Self {
+    async fn new(window: Window, headless: bool, webxr: bool) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -529,7 +533,7 @@ impl State {
 
         let cursor_pos = winit::dpi::PhysicalPosition {x:0.0, y:0.0};
 
-        let render_state = create_redner_state(device, queue, surface_format, size.width, size.height).await;
+        let render_state = create_redner_state(device, queue, surface_format, size.width, size.height, webxr).await;
         let window_state = if headless {None} else {Some(WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false})};
         Self {
             render_state,
@@ -596,10 +600,8 @@ impl State {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn update_camera_mats(&mut self, view : &cgmath::Matrix4<f32>, projection: &cgmath::Matrix4<f32>) {
-        // Directly update camera matrices
-        // Only for use with WebXR
-        self.render_state.camera_state.camera_uniform.update_view_proj_mats(&view, &projection);
+    fn update_view_proj_webxr(&mut self, projection: &cgmath::Matrix4<f32>, pos: &cgmath::Vector3<f32>, rot: &cgmath::Quaternion<f32>) {
+        self.render_state.camera_state.camera_uniform.update_view_proj_webxr(&projection, &pos, &rot);
         self.update_camera_buffer();
     }
 
@@ -742,7 +744,7 @@ async fn run_xr() {
         // It doesn't seem to matter that the window is destroyed after
         // the end of this scope
         setup_window_canvas(&temp_window);
-        State::new(temp_window, true).await
+        State::new(temp_window, true, true).await
     };
     let a = xr::XrApp::new(state);
     a.init().await;    
@@ -760,7 +762,7 @@ async fn run_windowed() {
     }
 
     // State::new uses async code, so we're going to wait for it to finish
-    let mut state = State::new(window, false).await;
+    let mut state = State::new(window, false, false).await;
 
     let mut last_render_time = instant::Instant::now();
     event_loop.run(move |event, _, control_flow| {

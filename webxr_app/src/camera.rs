@@ -16,6 +16,15 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
+#[rustfmt::skip]
+pub const FLIPY_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
+    1.0, 0.0, 0.0, 0.0,
+    0.0, -1.0, 0.0, 0.0,
+    0.0, 0.0, 1.0, 0.0,
+    0.0, 0.0, 0.0, 1.0,
+);
+
+
 #[cfg(target_arch = "wasm32")]
 #[rustfmt::skip]
 pub const ROTZ_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
@@ -27,18 +36,6 @@ pub const ROTZ_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 
 
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
-
-#[cfg(target_arch = "wasm32")]
-fn lhs_to_rhs_view(l: &cgmath::Matrix4<f32>) -> cgmath::Matrix4<f32> {
-    let view = Matrix4::look_to_rh(
-        Point3::new(-l.w.x, -l.w.y, -l.w.z),
-        Vector3::new(l.z.x, l.z.y, l.z.z),
-        Vector3::new(l.y.x, l.y.y, l.y.z),
-    );
-    // For some reason the the camera ends up upside down, so rotate 180 around the Z axis
-    view * ROTZ_MATRIX
-}
-
 
 #[derive(Debug)]
 pub struct Camera {
@@ -64,9 +61,9 @@ impl Camera {
         let (sin_pitch, cos_pitch) = self.pitch.0.sin_cos();
         let (sin_yaw, cos_yaw) = self.yaw.0.sin_cos();
 
-        Matrix4::look_to_rh(
+        Matrix4::look_to_lh(
             self.position,
-            Vector3::new(cos_pitch * cos_yaw, sin_pitch, cos_pitch * sin_yaw).normalize(),
+            Vector3::new(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw).normalize(),
             Vector3::unit_y(),
         )
     }
@@ -182,8 +179,8 @@ impl CameraController {
         let dt = dt.as_secs_f32();
         // Move forward/backward and left/right
         let (yaw_sin, yaw_cos) = camera.yaw.0.sin_cos();
-        let forward = Vector3::new(yaw_cos, 0.0, yaw_sin).normalize();
-        let right = Vector3::new(-yaw_sin, 0.0, yaw_cos).normalize();
+        let forward = Vector3::new(-yaw_sin, 0.0, -yaw_cos).normalize();
+        let right = Vector3::new(yaw_cos, 0.0, -yaw_sin).normalize();
         camera.position += forward * (self.amount_forward - self.amount_backward) * self.speed * dt;
         camera.position += right * (self.amount_right - self.amount_left) * self.speed * dt;
 
@@ -193,7 +190,7 @@ impl CameraController {
         // to get closer to an object you want to focus on.
         let (pitch_sin, pitch_cos) = camera.pitch.0.sin_cos();
         let scrollward =
-            Vector3::new(pitch_cos * yaw_cos, pitch_sin, pitch_cos * yaw_sin).normalize();
+            Vector3::new(pitch_cos * yaw_sin, pitch_sin, pitch_cos * yaw_cos).normalize();
         camera.position += scrollward * self.scroll * self.speed * self.sensitivity * dt;
         self.scroll = 0.0;
 
@@ -202,8 +199,8 @@ impl CameraController {
         camera.position.y += (self.amount_up - self.amount_down) * self.speed * dt;
 
         // Rotate
-        camera.yaw += Rad(self.rotate_horizontal) * self.sensitivity * dt;
-        camera.pitch += Rad(-self.rotate_vertical) * self.sensitivity * dt;
+        camera.yaw += Rad(-self.rotate_horizontal) * self.sensitivity * dt;
+        camera.pitch += Rad(self.rotate_vertical) * self.sensitivity * dt;
 
         // If process_mouse isn't called every frame, these values
         // will not get set to zero, and the camera will rotate
@@ -245,9 +242,19 @@ impl CameraUniform {
     }
 
     #[cfg(target_arch = "wasm32")]
-    pub fn update_view_proj_mats(&mut self, view: &Matrix4<f32>, projection: &Matrix4<f32>) {
-        // TODO update self.view_position?
-        self.view_proj = (OPENGL_TO_WGPU_MATRIX * projection * lhs_to_rhs_view(view)).into();
+    pub fn update_view_proj_webxr(&mut self, projection: &Matrix4<f32>, pos: &Vector3<f32>, rot: &Quaternion<f32>) {
+        // Dealing with the WebXR coordinate system needs to be taken with care as there are a few complications that
+        // arise from performating rendering with wgpu directly to a WebGL framebuffer.
+        // The WebXR projection matrix, position and orientation passed into this function need to be manipulated because in WebXR 
+        // framebuffer has a flipped Y coordinate. We therefore:
+        // 1. Pre-mutiply the projection by FLIPY_MATRIX which inverts the y coordinate in clip space. 
+        // 2. Invert the triangle winding order to CW (see create_render_pipeline())
+        // 3. Invert the rotation directions to account for the inverted Y
+        // 4. Invert the position - not sure this is related to flipping Y, but seems necessary
+        let pos = pos * -1.;
+        let rot = rot.conjugate();
+        let view = Matrix4::from(Matrix3::from(rot)) * Matrix4::from_translation(pos);
+        self.view_proj = (FLIPY_MATRIX * projection * view).into();
     }
 }
 
@@ -267,7 +274,7 @@ pub struct CameraState
 impl CameraState {
     pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
 
-        let camera = Camera::new((0.0, 5.0, 10.0), cgmath::Deg(-90.0), cgmath::Deg(-20.0));
+        let camera = Camera::new((0.0, 0.0, 0.0), cgmath::Deg(0.0), cgmath::Deg(0.0));
         let projection = Projection::new(width, height, cgmath::Deg(45.0), 0.1, 100.0);
         let camera_controller = CameraController::new(4.0, 0.4);
 
