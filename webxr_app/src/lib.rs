@@ -721,12 +721,21 @@ pub fn run() {
     {
         utils::set_panic_hook();
         console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
-        use wasm_bindgen_futures::spawn_local;
         const XR_MODE: bool = true;
         if XR_MODE {
-            spawn_local(run_xr());
+            // Using future_to_promise here because spawn_local causes the xr.request_session to return a nil
+            // on the Meta Quest browser (XrSession unwrap fails in xr.rs).
+            // My best guess is that spawn_local interferes with the Meta Quest specific security check to ensures Immersive mode
+            // can only be triggered via a user event (since we ssee the same nil session behaviour when trying to 
+            // enter immersive mode automatically when starting the WASM, instead of triggering it via a buttom 
+            // click in index.html).
+            // spawn_local(run_xr());
+            let _ = wasm_bindgen_futures::future_to_promise(async {
+                run_xr().await;
+                Ok(JsValue::UNDEFINED)
+            });
         } else {
-            spawn_local(run_windowed());
+            wasm_bindgen_futures::spawn_local(run_windowed());
         }
     }
 }
