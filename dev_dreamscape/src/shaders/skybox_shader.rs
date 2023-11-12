@@ -27,7 +27,8 @@ impl SkyboxShader {
         let (texture_bind_group_layout, texture_bind_group) =
             new_texture_bind_group(device, params.texture, wgpu::TextureViewDimension::Cube);
 
-        let shader_module = new_shader_module(device, "skybox.wgsl").await;
+        let shader_module = new_shader_module(device,
+                                include_str!("skybox.wgsl")).await;
 
         let pipeline = new_render_pipeline(
             device,

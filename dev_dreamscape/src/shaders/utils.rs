@@ -3,12 +3,13 @@ use crate::device::Device;
 use crate::texture::Texture;
 use wgpu::util::DeviceExt;
 
-pub async fn new_shader_module(device: &Device, src_file_name: &str) -> wgpu::ShaderModule {
-    let src = load_string(src_file_name).await.unwrap();
+pub async fn new_shader_module(device: &Device, src_wgsl: &str) -> wgpu::ShaderModule {
+    //let src = load_string(src_file_name).await.unwrap();
 
     device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
-        source: wgpu::ShaderSource::Wgsl(src.into()),
+        //source: wgpu::ShaderSource::Wgsl(src.into()),
+        source: wgpu::ShaderSource::Wgsl(src_wgsl.into()), 
     })
 }
 
