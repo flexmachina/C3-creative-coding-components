@@ -16,9 +16,11 @@ env_logger = "0.10"
 getrandom = { version = "0.2.10" }
 instant = "0.1"
 log = "0.4"
+naga = { version = "0.13", features = ["wgsl-in", "wgsl-out", "clone", "span"] }
+naga_oil = "0.10.0"
 pollster = "0.3"
 tobj = { version = "3.2", features = ["async"]}
-wgpu = "0.17"
+wgpu = { version = "0.17", features = ["naga"]}
 winit = "0.28"
 
 [dependencies.image]
@@ -35,7 +37,7 @@ js-sys = "0.3.64"
 reqwest = { version = "0.11" }
 wasm-bindgen = "0.2.87"
 wasm-bindgen-futures = "0.4.37"
-wgpu = { version = "0.17", features = ["webgl"]}
+wgpu = { version = "0.17", features = ["webgl", "naga"]}
 wgpu-hal = { version = "0.17.0" }
 
 web-sys = { version = "0.3.37", features = [

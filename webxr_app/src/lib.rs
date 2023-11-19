@@ -1,6 +1,7 @@
 mod camera;
 mod model;
 mod resources;
+mod shader_utils;
 mod texture;
 #[cfg(target_arch = "wasm32")]
 mod utils;
@@ -384,10 +385,13 @@ async fn create_redner_state(
         push_constant_ranges: &[],
     });
 
+    let mut shader_composer = shader_utils::init_composer();
     let render_pipeline = {
         let shader = wgpu::ShaderModuleDescriptor {
             label: Some("Normal Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
+                shader_utils::load_shader!(&mut shader_composer, "shader.wgsl", webxr)
+            ))
         };
         create_render_pipeline(
             &device,
@@ -408,7 +412,9 @@ async fn create_redner_state(
         });
         let shader = wgpu::ShaderModuleDescriptor {
             label: Some("Light Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("light.wgsl").into()),
+            source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
+                shader_utils::load_shader!(&mut shader_composer, "light.wgsl", webxr)
+            ))
         };
         create_render_pipeline(
             &device,

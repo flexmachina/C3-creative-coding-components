@@ -1,3 +1,5 @@
+#import utils
+
 // Vertex shader
 
 struct Camera {
@@ -38,5 +40,11 @@ fn vs_main(
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.color, 1.0);
+
+#ifdef WEBXR
+    let final_color = utils::gamma_correction(in.color);
+#else
+    let final_color = in.color;
+#endif
+    return vec4<f32>(final_color, 1.0);
 }
