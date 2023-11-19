@@ -8,8 +8,8 @@ macro_rules! load_shader {
     ($composer:expr, $path:literal, $webxr:expr) => {{
         shader_utils::make_module(
             $composer,
-            $path,
-            include_str!($path), 
+            concat!("shaders/", $path),
+            include_str!(concat!("shaders/", $path)), 
             $webxr)
     }};
 }
@@ -52,8 +52,8 @@ pub fn init_composer() -> Composer {
 
     // Init modules for shared utils
     load_composable(
-        include_str!("utils.wgsl"),
-        "utils.wgsl",
+        include_str!("shaders/utils.wgsl"),
+        "shaders/utils.wgsl",
     );
     composer
 }
