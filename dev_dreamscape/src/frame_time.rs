@@ -1,6 +1,8 @@
 use bevy_ecs::prelude::*;
 use std::collections::VecDeque;
-use std::time::Instant;
+//use std::time::Instant;
+use web_time::{Instant, SystemTime};
+
 
 #[derive(Resource)]
 pub struct FrameTime {

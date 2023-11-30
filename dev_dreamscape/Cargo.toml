@@ -30,7 +30,7 @@ ddsfile = "0.5.1"
 #imgui = "0.10.0"
 #imgui-wgpu = "0.22.0"
 rapier3d = { version = "0.17.2", features = ["simd-stable"] }
-
+web-time = "0.2.3"
 
 [build-dependencies]
 anyhow = "1.0"

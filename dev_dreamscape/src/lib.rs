@@ -6,6 +6,7 @@ mod device;
 mod events;
 mod frame_time;
 mod input;
+mod logging; 
 mod math;
 mod mesh;
 mod physics_world;

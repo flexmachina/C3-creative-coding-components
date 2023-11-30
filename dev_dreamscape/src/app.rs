@@ -13,6 +13,7 @@ use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent}
 
 use crate::systems::*;
 use crate::assets::Assets;
+use crate::logging::{init_logging, printlog};
 
 /*
 pub struct App {
@@ -26,6 +27,7 @@ pub struct App {
 
 pub fn init_app(world: &mut World) {
     println!("running init_app - started");
+    /*
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -35,10 +37,12 @@ pub fn init_app(world: &mut World) {
             env_logger::init();
         }
     }
-    println!("running init_app - created logger");
-    
+    */
+    init_logging();
+    printlog("running init_app - created logger");
+
     let event_loop = EventLoop::new();
-    println!("running init_app - created event_loop");
+    printlog("running init_app - created event_loop");
     
     let window = WindowBuilder::new()
         .with_title("Demo")
@@ -46,7 +50,7 @@ pub fn init_app(world: &mut World) {
         .build(&event_loop)
         .unwrap();
  
-    println!("running init_app - created window");
+    printlog("running init_app - created window");
 
     /*
     let event_loop = world.non_send_resource::<EventLoop<()>>();
@@ -95,6 +99,12 @@ pub fn init_app(world: &mut World) {
     world.insert_resource(FrameTime::new());
     world.insert_resource(Input::new());
     world.insert_resource(PhysicsWorld::new());
+
+
+    #[cfg(target_arch = "wasm32")]
+    {
+
+    }
 }
 
 
@@ -106,15 +116,15 @@ pub fn init_app(world: &mut World) {
 
 pub fn run_app() {
 
+    printlog("running run_app - starting");
     let mut world = World::default();
     world.init_resource::<Schedules>();
 
-    println!("running run_app - created world");
-
+    printlog("running run_app - created world");
     Schedule::default().add_system(init_app).run(&mut world);
-    println!("running run_app - run init_app");
+    printlog("running run_app - run init_app");
     Schedule::default().add_system(Assets::load).run(&mut world);
-    println!("running run_app - loaded assets");
+    printlog("running run_app - loaded assets");
 
 
 
