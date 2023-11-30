@@ -17,7 +17,8 @@ mod texture;
 
 use crate::systems::*;
 use bevy_ecs::prelude::*;
-use crate::app::App;
+//use crate::app::App;
+use crate::app::{run_app};
 use crate::assets::Assets;
 
 use winit::event_loop::EventLoop;
@@ -25,6 +26,7 @@ use winit::event_loop::EventLoop;
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
 
+/*
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
 pub fn run() {
     let mut world = World::default();
@@ -60,4 +62,11 @@ pub fn run() {
             return;
         }
     }
+}
+*/
+
+
+#[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
+pub fn run() {
+    run_app()
 }

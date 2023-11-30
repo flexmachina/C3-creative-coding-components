@@ -7,7 +7,7 @@ use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 use winit::event_loop::EventLoop;
 use winit::window::WindowBuilder;
-use crate::app::App;
+use crate::app::AppState;
 
 pub fn init_app(world: &mut World) {
     cfg_if::cfg_if! {
@@ -68,7 +68,7 @@ pub fn init_app(world: &mut World) {
     //world.insert_non_send_resource(DebugUI::new(&device, &window));
     world.insert_non_send_resource(window);
 
-    world.insert_resource(App {
+    world.insert_resource(AppState {
         running: true,
     });
     world.insert_resource(device);
