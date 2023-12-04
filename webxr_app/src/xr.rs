@@ -67,15 +67,13 @@ pub struct XrApp {
 }
 
 impl XrApp {
-    pub fn new(state: crate::State) -> Self {
+    pub fn new(state: Rc<RefCell<crate::State>>) -> Self {
 
         let session = Rc::new(RefCell::new(None));
         let ref_space = Rc::new(RefCell::new(None));
         let xr_mode = true;
         let gl = Rc::new(create_webgl_context(xr_mode).unwrap());
-
-        let state = Rc::new(RefCell::new(state));
-        Self { session, ref_space, gl, state }
+        Self { session, ref_space, gl, state: state.clone() }
     }
 
     pub async fn init(&self) {

@@ -21,7 +21,7 @@ naga_oil = "0.10.0"
 pollster = "0.3"
 tobj = { version = "3.2", features = ["async"]}
 wgpu = { version = "0.17", features = ["naga"]}
-winit = "0.28"
+winit = "0.28.4"
 
 [dependencies.image]
 version = "0.24"

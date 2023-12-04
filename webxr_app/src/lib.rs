@@ -8,25 +8,28 @@ mod utils;
 #[cfg(target_arch = "wasm32")]
 mod xr;
 
-use camera::CameraState;
-use model::{DrawLight, DrawModel, Vertex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use cgmath::prelude::*;
 #[allow(unused_imports)]
-use log::{debug,info};
+use log::{debug,error,info};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
+    event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
     window::{Window, WindowBuilder},
 };
+#[cfg(target_arch = "wasm32")]
+use winit::platform::web::EventLoopExtWebSys;
+
+use camera::CameraState;
+use model::{DrawLight, DrawModel, Vertex};
 
 
 const NUM_INSTANCES_PER_ROW: u32 = 10;
-
-
-#[cfg(target_arch = "wasm32")]
-use wasm_bindgen::prelude::*;
 
 struct Instance {
     position: cgmath::Vector3<f32>,
@@ -154,9 +157,39 @@ pub struct Rect {
     w: f32,
     h: f32
 }
+
+pub struct App {
+    state: Rc<RefCell<State>>,
+    #[cfg(target_arch = "wasm32")]
+    #[allow(dead_code)]
+    xr_app: Option<xr::XrApp>
+}
+
+impl App {
+    async fn new(window: Window, webxr: bool) -> Self {
+        // State::new uses async code, so we're going to wait for it to finish
+        let state = State::new(window, webxr).await;
+        let state = Rc::new(RefCell::new(state));
+        #[cfg(target_arch = "wasm32")]
+        {
+            let xr_app = if webxr {
+                let xr_app = xr::XrApp::new(state.clone());
+                xr_app.init().await;
+                Some(xr_app)
+            } else {
+                None
+            };
+            Self{state, xr_app}
+        }        
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self{state}
+        }
+    }
+}
 pub struct State {
     render_state: RenderState,
-    window_state: Option<WindowState>
+    window_state: WindowState
 }
 
 fn create_render_pipeline(
@@ -449,13 +482,6 @@ async fn create_redner_state(
 }
 
 #[cfg(target_arch = "wasm32")]
-fn create_temp_window() -> Window {
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
-    window
-}
-
-#[cfg(target_arch = "wasm32")]
 fn setup_window_canvas(window: &Window) {
 
     // Winit prevents sizing with CSS, so we have to set
@@ -479,7 +505,7 @@ fn setup_window_canvas(window: &Window) {
 impl State {
 
     // Creating some of the wgpu types requires async code
-    async fn new(window: Window, headless: bool, webxr: bool) -> Self {
+    async fn new(window: Window, webxr: bool) -> Self {
         let size = window.inner_size();
 
         // The instance is a handle to our GPU
@@ -540,7 +566,7 @@ impl State {
         let cursor_pos = winit::dpi::PhysicalPosition {x:0.0, y:0.0};
 
         let render_state = create_redner_state(device, queue, surface_format, size.width, size.height, webxr).await;
-        let window_state = if headless {None} else {Some(WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false})};
+        let window_state = WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false};
         Self {
             render_state,
             window_state
@@ -548,14 +574,14 @@ impl State {
     }
 
     pub fn window(&self) -> &Window {
-        let window_state = self.window_state.as_ref().unwrap();
+        let window_state = &self.window_state;
         &window_state.window
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.render_state.camera_state.projection.resize(new_size.width, new_size.height);
-            let window_state = self.window_state.as_mut().unwrap();
+            let window_state = &mut self.window_state;
             window_state.size = new_size;
             window_state.config.width = new_size.width;
             window_state.config.height = new_size.height;
@@ -588,7 +614,7 @@ impl State {
                 state,
                 ..
             } => {
-                self.window_state.as_mut().unwrap().mouse_pressed = *state == ElementState::Pressed;
+                self.window_state.mouse_pressed = *state == ElementState::Pressed;
                 true
             }
             _ => false
@@ -636,7 +662,7 @@ impl State {
     }
 
     fn render_to_surface(&mut self) -> Result<(), wgpu::SurfaceError> {
-        let surface = &self.window_state.as_ref().unwrap().surface;
+        let surface = &self.window_state.surface;
         let output = surface.get_current_texture()?;
         self.render_to_texture(&output.texture, None, None, true);
         output.present();
@@ -721,7 +747,7 @@ pub fn run() {
     #[cfg(not(target_arch = "wasm32"))]
     {
         env_logger::init();
-        pollster::block_on(run_windowed());
+        pollster::block_on(run_windowed(false));
     }
     #[cfg(target_arch = "wasm32")]
     {
@@ -731,42 +757,22 @@ pub fn run() {
         if XR_MODE {
             // Using future_to_promise here because spawn_local causes the xr.request_session to return a nil
             // on the Meta Quest browser (XrSession unwrap fails in xr.rs).
-            // My best guess is that spawn_local interferes with the Meta Quest specific security check to ensures Immersive mode
-            // can only be triggered via a user event (since we ssee the same nil session behaviour when trying to 
+            // My best guess is that spawn_local interferes with the Meta Quest specific security check that ensures Immersive mode
+            // can only be triggered via a user event. We see the same nil session behaviour when trying to 
             // enter immersive mode automatically when starting the WASM, instead of triggering it via a buttom 
-            // click in index.html).
+            // click in index.html.
             // spawn_local(run_xr());
             let _ = wasm_bindgen_futures::future_to_promise(async {
-                run_xr().await;
+                run_windowed(true).await;
                 Ok(JsValue::UNDEFINED)
             });
         } else {
-            wasm_bindgen_futures::spawn_local(run_windowed());
+            wasm_bindgen_futures::spawn_local(run_windowed(false));
         }
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-async fn run_xr() {
-    let state = {
-        // Even in headless mode we need to create a temporary window and
-        // surface otherwise request_adapter will return None. 
-        // This issue seems specifc to wasm32 builds using WebGL
-        // (when specifying features = ["webgl"] for wgpu in Cargo.toml).
-        let temp_window = create_temp_window();
-        // In addition, web builds require the window's canvas to be added to
-        // the HTML document otherwise WebGL initialization will fail.
-        // It doesn't seem to matter that the window is destroyed after
-        // the end of this scope
-        setup_window_canvas(&temp_window);
-        State::new(temp_window, true, true).await
-    };
-    let a = xr::XrApp::new(state);
-    a.init().await;    
-}
-
-async fn run_windowed() {
-
+async fn run_windowed(webxr: bool) {    
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
@@ -776,17 +782,19 @@ async fn run_windowed() {
         setup_window_canvas(&window);
     }
 
-    // State::new uses async code, so we're going to wait for it to finish
-    let mut state = State::new(window, false, false).await;
-
+    let app = App::new(window, webxr).await;
     let mut last_render_time = instant::Instant::now();
-    event_loop.run(move |event, _, control_flow| {
+
+    // Create closure to handle events. Skip certain events in webxr mode, like surface drawing.
+    let event_handler = move
+        |event: Event<()> , _: &EventLoopWindowTarget<()>, control_flow: &mut ControlFlow | {
         *control_flow = ControlFlow::Poll;
+        let mut state = app.state.borrow_mut();
         match event {
             Event::DeviceEvent {
                 event: DeviceEvent::MouseMotion{ delta, },
                 .. // We're not using device_id currently
-            } => if state.window_state.as_ref().unwrap().mouse_pressed {
+            } => if state.window_state.mouse_pressed {
                 state.render_state.camera_state.camera_controller.process_mouse(delta.0, delta.1)
             }
             Event::WindowEvent {
@@ -806,11 +814,15 @@ async fn run_windowed() {
                         ..
                     } => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(physical_size) => {
-                        state.resize(*physical_size);
+                        if !webxr {
+                            state.resize(*physical_size);
+                        }
                     }
                     WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                         // new_inner_size is &mut so w have to dereference it twice
-                        state.resize(**new_inner_size);
+                        if !webxr {
+                            state.resize(**new_inner_size);
+                        }
                     }
                     WindowEvent::CursorMoved {..} => {
                         state.input(event);
@@ -819,30 +831,42 @@ async fn run_windowed() {
                 }
             }
             Event::RedrawRequested(window_id) if window_id == state.window().id() => {
-                let now = instant::Instant::now();
-                let dt = now - last_render_time;
-                last_render_time = now;
-                state.update(dt);
-                match state.render_to_surface() {
-                    Ok(_) => {}
-                    // Reconfigure the surface if it's lost or outdated
-                    Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                        let window_state = state.window_state.as_ref().unwrap();
-                        state.resize(window_state.size)
+                if !webxr {
+                    let now = instant::Instant::now();
+                    let dt = now - last_render_time;
+                    last_render_time = now;
+                    state.update(dt);
+                    match state.render_to_surface() {
+                        Ok(_) => {}
+                        // Reconfigure the surface if it's lost or outdated
+                        Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
+                            let size = state.window_state.size;
+                            state.resize(size)
+                        }
+                        // The system is out of memory, we should probably quit
+                        Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                        // We're ignoring timeouts
+                        Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
                     }
-                    // The system is out of memory, we should probably quit
-                    Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                    // We're ignoring timeouts
-                    Err(wgpu::SurfaceError::Timeout) => log::warn!("Surface timeout"),
                 }
             }
             Event::MainEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually
                 // request it.
-                state.window().request_redraw();
+                if !webxr {
+                    state.window().request_redraw();
+                }
             }
             _ => {}
         }
-    });
+    };
+    #[cfg(target_arch = "wasm32")]
+    {
+        event_loop.spawn(event_handler);
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        event_loop.run(event_handler);
+    }
 }
 
