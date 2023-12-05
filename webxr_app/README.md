@@ -10,7 +10,7 @@ There are a few different ways to build to app.
 
 1. Build the wasm:
 ```
-> RUSTFLAGS=--cfg=web_sys_unstable_apis wasm-pack build --debug --target web
+> make wasm
 ```
 
 2. Run a webserver serving this directory. Use `-p` to change the port.
@@ -20,6 +20,14 @@ There are a few different ways to build to app.
 
 3. Launch a web browser at `localhost:8000`
 
+The Meta Quest browser requires https for non localhost addresses, but you can workaround this by setting up a reverse socket
+connection with adb:
+
+```
+adb reverse tcp:8000 tcp:8000
+```
+
+This allows you to browse to `localhost:8000` on the Quest Browser and access the webserver running on your development machine.
 
 ## Normal wasm
 
