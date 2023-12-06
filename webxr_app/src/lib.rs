@@ -1,6 +1,6 @@
+mod assets;
 mod camera;
 mod model;
-mod resources;
 mod shader_utils;
 mod texture;
 #[cfg(target_arch = "wasm32")]
@@ -331,7 +331,7 @@ async fn create_redner_state(
 
 
     let obj_model: model::Model =
-        resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout)
+        assets::load_model("cube.obj", &device, &queue, &texture_bind_group_layout)
             .await
             .unwrap();
 
@@ -421,9 +421,9 @@ async fn create_redner_state(
     let mut shader_composer = shader_utils::init_composer();
     let render_pipeline = {
         let shader = wgpu::ShaderModuleDescriptor {
-            label: Some("Normal Shader"),
+            label: Some("Phong Shader"),
             source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                shader_utils::load_shader!(&mut shader_composer, "shader.wgsl", webxr)
+                shader_utils::load_shader!(&mut shader_composer, "phong.wgsl", webxr)
             ))
         };
         create_render_pipeline(
