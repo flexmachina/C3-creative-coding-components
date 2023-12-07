@@ -1,5 +1,6 @@
 mod assets;
 mod camera;
+mod light;
 mod model;
 mod shader_utils;
 mod texture;
@@ -110,16 +111,6 @@ impl model::Vertex for InstanceRaw {
     }
 }
 
-#[repr(C)]
-#[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct LightUniform {
-    position: [f32; 3],
-    // Due to uniforms requiring 16 byte (4 float) spacing, we need to use a padding field here
-    _padding: u32,
-    color: [f32; 3],
-    _padding2: u32,
-}
-
 struct RenderState {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -133,9 +124,7 @@ struct RenderState {
     instances: Vec<Instance>,
     #[allow(dead_code)]
     instance_buffer: wgpu::Buffer,
-    light_uniform: LightUniform,
-    light_buffer: wgpu::Buffer,
-    light_bind_group: wgpu::BindGroup,
+    light: light::Light,
     light_render_pipeline: wgpu::RenderPipeline,
     #[allow(dead_code)]
     debug_material: model::Material,
@@ -336,19 +325,7 @@ async fn create_redner_state(
             .await
             .unwrap();
 
-    let light_uniform = LightUniform {
-        position: [2.0, 2.0, 2.0],
-        _padding: 0,
-        color: [1.0, 1.0, 1.0],
-        _padding2: 0,
-    };
-    
-    let (light_buffer, light_bind_group_layout, light_bind_group) =
-        wgpu_utils::new_uniform_bind_group(
-            &device,
-            bytemuck::cast_slice(&[light_uniform]),
-            wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-            "Light");
+    let light = light::Light::new(&device, [2.0, 2.0, 2.0], [1.0, 1.0, 1.0]);
 
     let debug_material = {
         let diffuse_bytes = include_bytes!("../res/cobble-diffuse.png");
@@ -391,7 +368,7 @@ async fn create_redner_state(
         bind_group_layouts: &[
             &texture_bind_group_layout,
             &camera_state.camera_bind_group_layout,
-            &light_bind_group_layout,
+            &light.bind_group_layout,
         ],
         push_constant_ranges: &[],
     });
@@ -418,7 +395,7 @@ async fn create_redner_state(
     let light_render_pipeline = {
         let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Light Pipeline Layout"),
-            bind_group_layouts: &[&camera_state.camera_bind_group_layout, &light_bind_group_layout],
+            bind_group_layouts: &[&camera_state.camera_bind_group_layout, &light.bind_group_layout],
             push_constant_ranges: &[],
         });
         let shader = wgpu::ShaderModuleDescriptor {
@@ -451,9 +428,7 @@ async fn create_redner_state(
         obj_model,
         instances,
         instance_buffer,
-        light_uniform,
-        light_buffer,
-        light_bind_group,
+        light,
         light_render_pipeline,
         debug_material,
     }
@@ -625,17 +600,17 @@ impl State {
 
     fn update_scene(&mut self, dt: std::time::Duration) {
         // Update the light
-        let old_position: cgmath::Vector3<_> = self.render_state.light_uniform.position.into();
+        let old_position: cgmath::Vector3<_> = self.render_state.light.uniform.position.into();
         let deg_per_sec = 90.;
         let deg = cgmath::Deg(deg_per_sec * dt.as_secs_f32());
-        self.render_state.light_uniform.position =
+        self.render_state.light.uniform.position =
             (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
                 * old_position)
                 .into();
         self.render_state.queue.write_buffer(
-            &self.render_state.light_buffer,
+            &self.render_state.light.buffer,
             0,
-            bytemuck::cast_slice(&[self.render_state.light_uniform]),
+            bytemuck::cast_slice(&[self.render_state.light.uniform]),
         );
     }
 
@@ -703,7 +678,7 @@ impl State {
             render_pass.draw_light_model(
                 &self.render_state.obj_model,
                 &self.render_state.camera_state.camera_bind_group,
-                &self.render_state.light_bind_group,
+                &self.render_state.light.bind_group,
             );
 
             render_pass.set_pipeline(&self.render_state.render_pipeline);
@@ -711,7 +686,7 @@ impl State {
                 &self.render_state.obj_model,
                 0..self.render_state.instances.len() as u32,
                 &self.render_state.camera_state.camera_bind_group,
-                &self.render_state.light_bind_group,
+                &self.render_state.light.bind_group,
             );
         }
 
