@@ -22,6 +22,7 @@ impl PostProcessor {
 
         let mesh = Mesh::quad(&device);
 
+        /*
         let shader = pollster::block_on(async {
             PostProcessShader::new(
                 &device,
@@ -30,6 +31,13 @@ impl PostProcessor {
                 },
             ).await
         });
+        */
+        let shader = PostProcessShader::new(
+                &device,
+                PostProcessShaderParams {
+                    texture: source_camera_rt.color_tex(),
+                },
+            );
 
         let renderer = MeshRenderer::new(
             mesh,
@@ -57,6 +65,7 @@ impl PostProcessor {
 
             if source_camera_rt.color_tex().size() != pp.0.size {
                 // TODO Better. We should NOT be re-creating the shader.
+                /*
                 let shader = pollster::block_on(async {
                     PostProcessShader::new(
                         &device,
@@ -65,6 +74,13 @@ impl PostProcessor {
                         },
                     ).await
                 });
+                */
+                let shader = PostProcessShader::new(
+                        &device,
+                        PostProcessShaderParams {
+                            texture: source_camera_rt.color_tex(),
+                        },
+                    );
 
                 pp.1.set_shader(ShaderVariant::PostProcess(shader));
             }

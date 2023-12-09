@@ -3,7 +3,8 @@ use crate::device::Device;
 use crate::texture::Texture;
 use wgpu::util::DeviceExt;
 
-pub async fn new_shader_module(device: &Device, src_wgsl: &str) -> wgpu::ShaderModule {
+//pub async fn new_shader_module(device: &Device, src_wgsl: &str) -> wgpu::ShaderModule {
+pub fn new_shader_module(device: &Device, src_wgsl: &str) -> wgpu::ShaderModule {
     //let src = load_string(src_file_name).await.unwrap();
 
     device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -103,7 +104,8 @@ pub struct RenderPipelineParams<'a> {
     pub vertex_buffer_layouts: &'a [wgpu::VertexBufferLayout<'a>],
 }
 
-pub async fn new_render_pipeline(
+pub fn new_render_pipeline(
+//pub async fn new_render_pipeline(
     device: &Device,
     params: RenderPipelineParams<'_>,
 ) -> wgpu::RenderPipeline {

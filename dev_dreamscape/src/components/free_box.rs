@@ -45,6 +45,7 @@ impl FreeBox {
         physics: &mut PhysicsWorld,
         assets: &Assets,
     ) -> (FreeBox, PhysicsBody, MeshRenderer, Transform) {
+        /*
         let (shader, mesh) = pollster::block_on(async {
             let shader = DiffuseShader::new(
                 device,
@@ -56,6 +57,14 @@ impl FreeBox {
             let mesh = Mesh::from_file("cube.obj", device).await;
             (shader, mesh)
         });
+        */
+        let shader = DiffuseShader::new(
+            device,
+            DiffuseShaderParams {
+                texture: &assets.stone_tex,
+            },
+        );
+        let mesh = Mesh::from_string(assets.cube_mesh_string.clone(), device);
 
         let scale = Vec3::from_element(1.0);
 

@@ -20,7 +20,8 @@ pub struct DiffuseShaderParams<'t> {
 }
 
 impl DiffuseShader {
-    pub async fn new(device: &Device, params: DiffuseShaderParams<'_>) -> Self {
+    //pub async fn new(device: &Device, params: DiffuseShaderParams<'_>) -> Self {
+    pub fn new(device: &Device, params: DiffuseShaderParams<'_>) -> Self {
         let matrices_uniform = MatricesUniform::new();
         let (matrices_uniform_bind_group_layout, matrices_uniform_bind_group, matrices_uniform_buf) =
             new_uniform_bind_group(device, bytemuck::cast_slice(&[matrices_uniform]));
@@ -28,7 +29,8 @@ impl DiffuseShader {
         let (texture_bind_group_layout, texture_bind_group) =
             new_texture_bind_group(device, params.texture, wgpu::TextureViewDimension::D2);
 
-        let shader_module = new_shader_module(device, include_str!("diffuse.wgsl")).await;
+        //let shader_module = new_shader_module(device, include_str!("diffuse.wgsl")).await;
+        let shader_module = new_shader_module(device, include_str!("diffuse.wgsl"));
 
         let pipeline = new_render_pipeline(
             device,
@@ -42,8 +44,8 @@ impl DiffuseShader {
                 ],
                 vertex_buffer_layouts: &[MeshVertex::buffer_layout()],
             },
-        )
-        .await;
+        );
+        //.await;
 
         Self {
             texture_bind_group,

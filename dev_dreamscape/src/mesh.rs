@@ -111,23 +111,30 @@ impl Mesh {
         }
     }
 
-    pub async fn from_file(file_name: &str, device: &Device) -> Mesh {
-        let text = load_string(file_name).await.unwrap();
+    pub fn from_string(text: String, device: &Device) -> Mesh {
+    //pub async fn from_file(file_name: &str, device: &Device) -> Mesh {
+        //let text = load_string(file_name).await.unwrap();
         let cursor = Cursor::new(text);
         let mut reader = BufReader::new(cursor);
 
-        let (meshes, _) = tobj::load_obj_buf_async(
+        //https://kylemayes.github.io/vulkanalia/model/loading_models.html
+        //No need to load the materials since we ignore the second parameter anyway
+        //let (meshes, _) = tobj::load_obj_buf_async(
+        let (meshes, _) = tobj::load_obj_buf(
             &mut reader,
             &tobj::LoadOptions {
                 triangulate: true,
                 single_index: true,
                 ..Default::default()
             },
+            /*
             |p| async move {
                 let mat_text = load_string(&p).await.unwrap();
                 tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
             },
-        ).await.unwrap();
+            */
+            |_| Ok(Default::default()),
+        ).unwrap(); //.await.unwrap();
 
         let parts = meshes
             .into_iter()
