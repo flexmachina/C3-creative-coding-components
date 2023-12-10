@@ -86,7 +86,7 @@ impl Player {
 
         // Move and rotate
         let dt = frame_time.delta;
-        if input.rmb_down {
+        if input.lmb_down {
             player.rotate(&mut transform, &input, dt);
             player.translate(&mut transform, dt, &input, &mut physics);
         }

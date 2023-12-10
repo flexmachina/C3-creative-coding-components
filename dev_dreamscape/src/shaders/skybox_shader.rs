@@ -18,7 +18,8 @@ pub struct SkyboxShaderParams<'t> {
 }
 
 impl SkyboxShader {
-    pub async fn new(device: &Device, params: SkyboxShaderParams<'_>) -> Self {
+    pub fn new(device: &Device, params: SkyboxShaderParams<'_>) -> Self {
+    //pub async fn new(device: &Device, params: SkyboxShaderParams<'_>) -> Self {
         let data_uniform = DataUniform::new();
 
         let (data_uniform_bind_group_layout, data_uniform_bind_group, data_uniform_buf) =
@@ -27,8 +28,10 @@ impl SkyboxShader {
         let (texture_bind_group_layout, texture_bind_group) =
             new_texture_bind_group(device, params.texture, wgpu::TextureViewDimension::Cube);
 
+        //let shader_module = new_shader_module(device,
+        //                        include_str!("skybox.wgsl")).await;
         let shader_module = new_shader_module(device,
-                                include_str!("skybox.wgsl")).await;
+                                include_str!("skybox.wgsl"));
 
         let pipeline = new_render_pipeline(
             device,
@@ -39,8 +42,8 @@ impl SkyboxShader {
                 bind_group_layouts: &[&data_uniform_bind_group_layout, &texture_bind_group_layout],
                 vertex_buffer_layouts: &[MeshVertex::buffer_layout()],
             },
-        )
-        .await;
+        );
+        //.await;
 
         Self {
             pipeline,

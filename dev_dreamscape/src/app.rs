@@ -7,7 +7,10 @@ use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 use bevy_ecs::system::SystemState;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
+
+#[cfg(target_arch="wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
+
 use winit::window::{WindowBuilder, Window};
 use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent};
 
@@ -25,7 +28,7 @@ pub struct App {
 */
 
 
-pub fn init_app(world: &mut World) {
+pub async fn init_app(world: &mut World) {
     println!("running init_app - started");
     /*
     cfg_if::cfg_if! {
@@ -38,7 +41,6 @@ pub fn init_app(world: &mut World) {
         }
     }
     */
-    init_logging();
     printlog("running init_app - created logger");
 
     let event_loop = EventLoop::new();
@@ -80,9 +82,21 @@ pub fn init_app(world: &mut World) {
             .expect("Couldn't append canvas to document body.");
     }
 
-    let device = pollster::block_on(async {
-        Device::new(&window).await
+    //let device = pollster::block_on(async {
+    //    Device::new(&window).await
+    //});
+    let device = Device::new(&window).await;
+
+    printlog("running init_app - loading assets outside schedule");
+    //let assets = Assets::load_and_return(&device);
+    let assets = Assets::load_and_return(&device).await;
+    /*
+    let assets = pollster::block_on(async {
+        Assets::load_and_return(&device).await
     });
+    */
+    printlog("running init_app - done loading assets outside schedule");
+
 
     world.init_resource::<Events<WindowResizeEvent>>();
     world.init_resource::<Events<KeyboardEvent>>();
@@ -96,15 +110,12 @@ pub fn init_app(world: &mut World) {
         running: true,
     });
     world.insert_resource(device);
+    world.insert_resource(assets);
     world.insert_resource(FrameTime::new());
     world.insert_resource(Input::new());
     world.insert_resource(PhysicsWorld::new());
 
 
-    #[cfg(target_arch = "wasm32")]
-    {
-
-    }
 }
 
 
@@ -114,17 +125,19 @@ pub fn init_app(world: &mut World) {
 
 
 
-pub fn run_app() {
+pub async fn run_app() {
 
+    init_logging();
     printlog("running run_app - starting");
     let mut world = World::default();
     world.init_resource::<Schedules>();
 
     printlog("running run_app - created world");
-    Schedule::default().add_system(init_app).run(&mut world);
+    init_app(&mut world).await;
+    //Schedule::default().add_system(init_app).run(&mut world);
     printlog("running run_app - run init_app");
-    Schedule::default().add_system(Assets::load).run(&mut world);
-    printlog("running run_app - loaded assets");
+    //Schedule::default().add_system(Assets::load).run(&mut world);
+    //printlog("running run_app - loaded assets");
 
 
 
@@ -238,13 +251,24 @@ pub fn run_app() {
                 _ => (),
             },
 
+
+            Event::RedrawRequested(window_id) if window_id == window.id() => {
+                world.run_schedule(spawn_scene_schedule.1);
+                world.run_schedule(preupdate_schedule.1);
+                world.run_schedule(update_schedule.1);
+                world.run_schedule(render_schedule.1);
+            },
+
+            Event::RedrawEventsCleared => {
+                // RedrawRequested will only trigger once, unless we manually
+                // request it.
+                window.request_redraw();
+            },
+
+
             _ => {}
         }
 
-        world.run_schedule(spawn_scene_schedule.1);
-        world.run_schedule(preupdate_schedule.1);
-        world.run_schedule(update_schedule.1);
-        world.run_schedule(render_schedule.1);
 
         if !world.resource::<AppState>().running {
             *control_flow = ControlFlow::Exit;

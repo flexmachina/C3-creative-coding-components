@@ -1,5 +1,5 @@
 use dev_dreamscape::run;
 
 fn main() {
-    run();
+    pollster::block_on(run());
 }

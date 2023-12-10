@@ -13,6 +13,7 @@ pub struct Skybox;
 
 impl Skybox {
     pub fn spawn(mut commands: Commands, device: Res<Device>, assets: Res<Assets>) {
+        /*
         let (shader, mesh) = pollster::block_on(async {
             let shader = SkyboxShader::new(
                 &device,
@@ -24,6 +25,14 @@ impl Skybox {
             let mesh = Mesh::quad(&device);
             (shader, mesh)
         });
+        */
+        let shader = SkyboxShader::new(
+            &device,
+            SkyboxShaderParams {
+                texture: &assets.skybox_tex,
+            },
+        );
+        let mesh = Mesh::quad(&device);
 
         let renderer = MeshRenderer::new(mesh, ShaderVariant::Skybox(shader), RenderTags::SCENE);
 

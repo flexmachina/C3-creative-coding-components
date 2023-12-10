@@ -20,6 +20,7 @@ impl FloorBox {
         mut physics: ResMut<PhysicsWorld>,
         assets: Res<Assets>,
     ) {
+        /*
         let (shader, mesh) = pollster::block_on(async {
             let shader = DiffuseShader::new(
                 &device,
@@ -31,6 +32,15 @@ impl FloorBox {
             let mesh = Mesh::from_file("cube.obj", &device).await;
             (shader, mesh)
         });
+        */
+        let shader = DiffuseShader::new(
+            &device,
+            DiffuseShaderParams {
+                texture: &assets.stone_tex,
+            },
+        );
+        let mesh = Mesh::from_string(assets.cube_mesh_string.clone(), &device);
+
 
         let renderer = MeshRenderer::new(mesh, ShaderVariant::Diffuse(shader), RenderTags::SCENE);
 

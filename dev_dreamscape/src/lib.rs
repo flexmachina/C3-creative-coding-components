@@ -68,6 +68,6 @@ pub fn run() {
 
 
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
-pub fn run() {
-    run_app()
+pub async fn run() {
+    run_app().await
 }
