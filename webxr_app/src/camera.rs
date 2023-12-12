@@ -6,8 +6,6 @@ use std::time::Duration;
 use winit::dpi::PhysicalPosition;
 use winit::event::*;
 
-use crate::wgpu_utils;
-
 
 #[rustfmt::skip]
 pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
@@ -33,6 +31,7 @@ pub struct Camera {
     pub position: Point3<f32>,
     yaw: Rad<f32>,
     pitch: Rad<f32>,
+    pub projection: Projection,
 }
 
 impl Camera {
@@ -40,11 +39,13 @@ impl Camera {
         position: V,
         yaw: Y,
         pitch: P,
+        projection: Projection 
     ) -> Self {
         Self {
             position: position.into(),
             yaw: yaw.into(),
             pitch: pitch.into(),
+            projection
         }
     }
 
@@ -60,6 +61,8 @@ impl Camera {
     }
 }
 
+
+#[derive(Debug)]
 pub struct Projection {
     aspect: f32,
     fovy: Rad<f32>,
@@ -220,16 +223,16 @@ pub struct CameraUniform {
 }
 
 impl CameraUniform {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             view_position: [0.0; 4],
             view_proj: cgmath::Matrix4::identity().into(),
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Camera, projection: &Projection) {
+    pub fn update_view_proj(&mut self, camera: &Camera) {
         self.view_position = camera.position.to_homogeneous().into();
-        self.view_proj = (projection.calc_matrix() * camera.calc_matrix()).into()
+        self.view_proj = (camera.projection.calc_matrix() * camera.calc_matrix()).into()
     }
 
     #[cfg(target_arch = "wasm32")]
@@ -243,6 +246,10 @@ impl CameraUniform {
         // 3. Invert the rotation directions to account for the inverted Y
         // 4. Invert the position - not sure this is related to flipping Y, but seems necessary
         let pos = pos * -1.;
+        
+        // TODO verify this is correct
+        self.view_position = [pos.x, pos.y, pos.z, 1.0];
+
         let rot = rot.conjugate();
         let view = Matrix4::from(Matrix3::from(rot)) * Matrix4::from_translation(pos);
         self.view_proj = (FLIPY_MATRIX * projection * view).into();
@@ -254,38 +261,28 @@ impl CameraUniform {
 pub struct CameraState
 {
     pub camera: Camera,
-    pub projection: Projection,
     pub camera_controller: CameraController,
     pub camera_uniform: CameraUniform,
-    pub camera_buffer: wgpu::Buffer,
-    pub camera_bind_group: wgpu::BindGroup,
-    pub camera_bind_group_layout: wgpu::BindGroupLayout
 }
 
 impl CameraState {
-    pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Self {
+    pub fn new(width: u32, height: u32) -> Self {
 
-        let camera = Camera::new((0.0, 0.0, 0.0), cgmath::Deg(0.0), cgmath::Deg(0.0));
         let projection = Projection::new(width, height, cgmath::Deg(45.0), 0.1, 100.0);
+        let camera = Camera::new(
+            (0.0, 0.0, 0.0), 
+            cgmath::Deg(0.0), 
+            cgmath::Deg(0.0),
+            projection);
         let camera_controller = CameraController::new(4.0, 0.4);
 
         let mut camera_uniform = CameraUniform::new();
-        camera_uniform.update_view_proj(&camera, &projection);
+        camera_uniform.update_view_proj(&camera);
 
-        let (camera_buffer, camera_bind_group_layout, camera_bind_group) =
-            wgpu_utils::new_uniform_bind_group(
-                &device,
-                bytemuck::cast_slice(&[camera_uniform]),
-                wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                "Camera");
         Self {
             camera,
-            projection,
             camera_controller,
             camera_uniform,
-            camera_buffer,
-            camera_bind_group,
-            camera_bind_group_layout
         }
     }
 }
