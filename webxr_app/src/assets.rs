@@ -99,7 +99,6 @@ pub async fn load_model(
         let normal_texture = load_texture(&m.normal_texture, true, device, queue).await?;
 
         materials.push(model::Material::new(
-            device,
             &m.name,
             diffuse_texture,
             normal_texture

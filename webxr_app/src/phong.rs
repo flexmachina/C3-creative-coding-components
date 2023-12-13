@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use wgpu::{util::DeviceExt, BindGroupLayout, Device, Queue};
 
 use crate::{
-    camera::{Camera, CameraUniform},
+    camera::CameraUniform,
     instance::{Instance, InstanceRaw},
     light::{Light, LightUniform},
     model::{self, DrawModel, Vertex},
     node::Node,
     pass::Pass,
+    Rect,
     shader_utils,
     texture,
 };
@@ -45,7 +46,6 @@ impl PhongPass {
         phong_config: &PhongConfig,
         device: &wgpu::Device,
         color_format: wgpu::TextureFormat,
-        camera: &Camera,
         webxr: bool
     ) -> PhongPass {
         // Setup global uniforms
@@ -359,14 +359,16 @@ impl PhongPass {
 impl Pass for PhongPass {
     fn draw(
         &mut self,
-        view: &wgpu::TextureView,
+        color_view: &wgpu::TextureView,
         depth_view: &wgpu::TextureView,
         device: &Device,
         queue: &Queue,
         nodes: &Vec<Node>,
         camera_uniform: &CameraUniform,
-        light_uniform: &LightUniform
-    ) {
+        light_uniform: &LightUniform,
+        viewport: Option<Rect>,
+        clear: bool
+    ) -> wgpu::CommandBuffer {
         queue.write_buffer(
             &self.light_buffer,
             0,
@@ -386,33 +388,34 @@ impl Pass for PhongPass {
         // Setup the render pass
         // see: clear color, depth stencil
         {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+           let mut render_pass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
+                    view: &color_view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        // Set the clear color during redraw
-                        // This is basically a background color applied if an object isn't taking up space
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
+                        load:
+                            if clear {wgpu::LoadOp::Clear(wgpu::Color::BLACK) }
+                            else { wgpu::LoadOp::Load },
                         store: true,
-                    },
+                    }
                 })],
-                // Create a depth stencil buffer using the depth texture
                 depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                     view: &depth_view,
                     depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
+                        load:
+                            if clear {wgpu::LoadOp::Clear(1.0)} 
+                            else { wgpu::LoadOp::Load},
+                        store: true
                     }),
                     stencil_ops: None,
                 }),
             });
+            
+            match viewport {
+                Some(v) => { render_pass.set_viewport(v.x, v.y, v.w, v.h, 0.0, 1.0); }
+                _ => {}
+            };
 
             // Loop over the nodes/models in a scene and setup the specific models
             // local uniform bind group and instance buffers to send to shader
@@ -490,6 +493,6 @@ impl Pass for PhongPass {
                 );
             }
         }
-        queue.submit(std::iter::once(encoder.finish()));
+        encoder.finish()
     }
 }

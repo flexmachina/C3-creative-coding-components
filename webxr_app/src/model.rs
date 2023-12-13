@@ -62,7 +62,6 @@ pub struct Material {
 
 impl Material {
     pub fn new(
-        device: &wgpu::Device,
         name: &str,
         diffuse_texture: texture::Texture,
         normal_texture: texture::Texture

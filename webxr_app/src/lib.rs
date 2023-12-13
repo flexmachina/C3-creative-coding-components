@@ -22,7 +22,6 @@ use log::{debug,error,info};
 use pass::Pass;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
@@ -39,6 +38,13 @@ use crate::phong::PhongConfig;
 
 const NUM_INSTANCES_PER_ROW: u32 = 10;
 
+pub struct Rect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32
+}
+
 struct RenderState {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -50,8 +56,6 @@ struct RenderState {
     phong_pass: phong::PhongPass,
     nodes: Vec<Node>,
 
-    #[allow(dead_code)]
-    instance_buffer: wgpu::Buffer,
     light: light::Light,
     #[allow(dead_code)]
     debug_material: model::Material,
@@ -66,13 +70,6 @@ pub struct WindowState
     cursor_pos: winit::dpi::PhysicalPosition<f64>,
     mouse_pressed: bool,
     window: Window,
-}
-
-pub struct Rect {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32
 }
 
 pub struct App {
@@ -140,14 +137,6 @@ async fn create_redner_state(
         })
         .collect::<Vec<_>>();
 
-    let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-    let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Instance Buffer"),
-        contents: bytemuck::cast_slice(&instance_data),
-        usage: wgpu::BufferUsages::VERTEX,
-    });
-
-
     let obj_model: model::Model =
         assets::load_model("cube.obj", &device, &queue)
             .await
@@ -183,7 +172,6 @@ async fn create_redner_state(
         .unwrap();
 
         model::Material::new(
-            &device,
             "alt-material",
             diffuse_texture,
             normal_texture
@@ -204,7 +192,6 @@ async fn create_redner_state(
         &phong_config,
         &device,
         color_format,
-        &camera_state.camera,
         webxr
     );
 
@@ -218,7 +205,6 @@ async fn create_redner_state(
         phong_pass,
         nodes,
  
-        instance_buffer,
         light,
         debug_material,
     }
@@ -402,65 +388,20 @@ impl State {
             Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
             _ => self.render_state.depth_texture.texture.create_view(&wgpu::TextureViewDescriptor::default())
         };
-        // let mut encoder = self.render_state.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        //     label: Some("Render Encoder"),
-        // });
-
-        {
-            // let mut render_pass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            //     label: Some("Render Pass"),
-            //     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            //         view: &color_view,
-            //         resolve_target: None,
-            //         ops: wgpu::Operations {
-            //             load:
-            //                 if clear {
-            //                     wgpu::LoadOp::Clear(wgpu::Color {
-            //                         r: 0.1,
-            //                         g: 0.2,
-            //                         b: 0.3,
-            //                         a: 1.0,
-            //                     })
-            //                 } else {
-            //                     wgpu::LoadOp::Load
-            //                 },
-            //             store: true,
-            //         }
-            //     })],
-            //     depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-            //         view: &depth_view,
-            //         depth_ops: Some(wgpu::Operations {
-            //             load:
-            //                 if clear {
-            //                     wgpu::LoadOp::Clear(1.0)
-            //                 } else {
-            //                     wgpu::LoadOp::Load
-            //                 },
-            //             store: true
-            //         }),
-            //         stencil_ops: None,
-            //     }),
-            // });
-            
-            // TODO make viewport work
-            // match viewport {
-            //     Some(v) => { render_pass.set_viewport(v.x, v.y, v.w, v.h, 0.0, 1.0); }
-            //     _ => {}
-            // };
-
-            self.render_state.phong_pass.draw(
-                &color_view,
-                &depth_view,
-                &self.render_state.device,
-                &self.render_state.queue,
-                &self.render_state.nodes,
-                &self.render_state.camera_state.camera_uniform,
-                &self.render_state.light.uniform,
-            )
-        }
-
+        let command_buffer  = self.render_state.phong_pass.draw(
+            &color_view,
+            &depth_view,
+            &self.render_state.device,
+            &self.render_state.queue,
+            &self.render_state.nodes,
+            &self.render_state.camera_state.camera_uniform,
+            &self.render_state.light.uniform,
+            viewport,
+            clear
+        );
+        
         // submit will accept anything that implements IntoIter
-        //self.render_state.queue.submit(std::iter::once(encoder.finish()));
+        self.render_state.queue.submit(std::iter::once(command_buffer));
     }
 }
 
