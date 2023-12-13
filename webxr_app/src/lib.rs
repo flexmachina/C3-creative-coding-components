@@ -184,8 +184,6 @@ async fn create_redner_state(
     let camera_state = camera::CameraState::new(width, height);
 
     let phong_config = PhongConfig {
-        max_lights: 1,
-        ambient: Default::default(),
         wireframe: false,
     };
     let phong_pass = phong::PhongPass::new(

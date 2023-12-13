@@ -15,8 +15,6 @@ use crate::{
 };
 
 pub struct PhongConfig {
-    pub max_lights: usize,
-    pub ambient: [u32; 3],
     pub wireframe: bool,
 }
 
