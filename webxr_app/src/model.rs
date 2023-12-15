@@ -107,11 +107,6 @@ pub trait DrawModel<'a> {
         model: &'a Model,
         instances: Range<u32>
     );
-    fn draw_model_instanced_with_material(
-        &mut self,
-        model: &'a Model,
-        instances: Range<u32>
-    );
 }
 
 impl<'a, 'b> DrawModel<'b> for wgpu::RenderPass<'a>
@@ -143,19 +138,6 @@ where
     }
 
     fn draw_model_instanced(
-        &mut self,
-        model: &'b Model,
-        instances: Range<u32>
-    ) {
-        for mesh in &model.meshes {
-            self.draw_mesh_instanced(
-                mesh,
-                instances.clone(),
-            );
-        }
-    }
-
-    fn draw_model_instanced_with_material(
         &mut self,
         model: &'b Model,
         instances: Range<u32>
