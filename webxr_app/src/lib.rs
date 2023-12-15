@@ -61,8 +61,7 @@ struct Scene {
     nodes: Vec<Node>,
 }
 
-pub struct WindowState
-{
+pub struct WindowState {
     surface: wgpu::Surface,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
