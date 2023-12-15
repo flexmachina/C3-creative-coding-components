@@ -9,6 +9,8 @@ use js_sys::{Object, Reflect};
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 
+use crate::camera::XrCamera;
+
 
 fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFrame)>) -> u32 {
     // This turns the Closure into a js_sys::Function
@@ -175,11 +177,11 @@ impl XrApp {
 
                 // Get decomposed position and orientation as they are easier to operate on than the view matrix
                 let pos = view.transform().position();
-                let pos = cgmath::Vector3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
+                let position = cgmath::Vector3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
                 let r = view.transform().orientation();
-                let r = cgmath::Quaternion::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
+                let rotation = cgmath::Quaternion::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
 
-                state.update_view_proj_webxr(&to_mat(&view.projection_matrix()), &pos, &r);
+                state.scene.camera.xr_camera = XrCamera{position, rotation, projection: to_mat(&view.projection_matrix())};
 
                 let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
                 last_frame_time.replace(time);

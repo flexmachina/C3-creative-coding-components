@@ -1,6 +1,6 @@
-use crate::camera::CameraUniform;
+use crate::camera::Camera;
 use crate::Rect;
-use crate::light::LightUniform;
+use crate::light::Light;
 use crate::node::Node;
 
 
@@ -12,8 +12,8 @@ pub trait Pass {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         nodes: &Vec<Node>,
-        camera: &CameraUniform,
-        light: &LightUniform,
+        camera: &Camera,
+        light: &Light,
         viewport: Option<Rect>,
         clear: bool
     ) -> wgpu::CommandBuffer;

@@ -30,7 +30,6 @@ use winit::{
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
-use camera::CameraState;
 use instance::Instance;
 use node::Node;
 
@@ -51,14 +50,15 @@ struct RenderState {
     #[allow(dead_code)]
     color_format: wgpu::TextureFormat,
     depth_texture: texture::Texture,
-    camera_state: CameraState,
 
     phong_pass: phong::PhongPass,
-    nodes: Vec<Node>,
+}
 
+// Entities in world
+struct Scene {
     light: light::Light,
-    #[allow(dead_code)]
-    debug_material: model::Material,
+    camera: camera::Camera,
+    nodes: Vec<Node>,
 }
 
 pub struct WindowState
@@ -103,17 +103,31 @@ impl App {
 }
 pub struct State {
     render_state: RenderState,
-    window_state: WindowState
+    window_state: WindowState,
+    camera_controller: camera::CameraController,
+    scene: Scene,
 }
 
-async fn create_redner_state(
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    color_format: wgpu::TextureFormat,
+async fn create_scene(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
     width: u32,
-    height: u32,
-    webxr: bool) -> RenderState
-{
+    height: u32) -> Scene {
+
+    let light = light::Light{
+        position: (2.0, 2.0, 2.0).into(),
+        color: (1.0, 1.0, 1.0).into()
+    };
+
+    let projection = camera::Projection::new(
+        width, height, 
+        cgmath::Deg(45.0), 0.1, 100.0);
+    let camera = camera::Camera::new(
+        (0.0, 0.0, 0.0), 
+        cgmath::Deg(0.0), 
+        cgmath::Deg(0.0),
+        projection);
+
     const SPACE_BETWEEN: f32 = 3.0;
     let instances = (0..NUM_INSTANCES_PER_ROW)
         .flat_map(|z| {
@@ -137,12 +151,11 @@ async fn create_redner_state(
         })
         .collect::<Vec<_>>();
 
+    // TODO: Use resource id instead?
     let obj_model: model::Model =
         assets::load_model("cube.obj", &device, &queue)
             .await
             .unwrap();
-
-    let light = light::Light::new([2.0, 2.0, 2.0], [1.0, 1.0, 1.0]);
 
     let obj_node = Node {
         model: obj_model,
@@ -150,38 +163,23 @@ async fn create_redner_state(
     };
     let nodes = vec![obj_node];
 
-    let debug_material = {
-        let diffuse_bytes = include_bytes!("../res/cobble-diffuse.png");
-        let normal_bytes = include_bytes!("../res/cobble-normal.png");
+    Scene {
+        light,
+        camera,
+        nodes
+    }
+}
 
-        let diffuse_texture = texture::Texture::from_bytes(
-            &device,
-            &queue,
-            diffuse_bytes,
-            "res/alt-diffuse.png",
-            false,
-        )
-        .unwrap();
-        let normal_texture = texture::Texture::from_bytes(
-            &device,
-            &queue,
-            normal_bytes,
-            "res/alt-normal.png",
-            true,
-        )
-        .unwrap();
-
-        model::Material::new(
-            "alt-material",
-            diffuse_texture,
-            normal_texture
-        )
-    };
+async fn create_redner_state(
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    color_format: wgpu::TextureFormat,
+    width: u32,
+    height: u32,
+    webxr: bool) -> RenderState {
 
     let depth_texture = 
     texture::Texture::create_depth_texture(&device, width, height, "depth_texture");
-
-    let camera_state = camera::CameraState::new(width, height);
 
     let phong_config = PhongConfig {
         wireframe: false,
@@ -198,13 +196,7 @@ async fn create_redner_state(
         queue, 
         color_format,
         depth_texture,
-        camera_state,
-
         phong_pass,
-        nodes,
- 
-        light,
-        debug_material,
     }
 }
 
@@ -292,11 +284,16 @@ impl State {
 
         let cursor_pos = winit::dpi::PhysicalPosition {x:0.0, y:0.0};
 
+        let scene = create_scene(&device, &queue, size.width, size.height).await;
+
         let render_state = create_redner_state(device, queue, surface_format, size.width, size.height, webxr).await;
         let window_state = WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false};
+        let camera_controller = camera::CameraController::new(4.0, 0.4);
         Self {
             render_state,
-            window_state
+            window_state,
+            camera_controller,
+            scene
         }
     }
 
@@ -307,7 +304,7 @@ impl State {
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.render_state.camera_state.camera.projection.resize(new_size.width, new_size.height);
+            self.scene.camera.projection.resize(new_size.width, new_size.height);
             let window_state = &mut self.window_state;
             window_state.size = new_size;
             window_state.config.width = new_size.width;
@@ -331,9 +328,9 @@ impl State {
                         ..
                     },
                 ..
-            } => self.render_state.camera_state.camera_controller.process_keyboard(*key, *state),
+            } => self.camera_controller.process_keyboard(*key, *state),
             WindowEvent::MouseWheel { delta, .. } => {
-                self.render_state.camera_state.camera_controller.process_scroll(delta);
+                self.camera_controller.process_scroll(delta);
                 true
             }
             WindowEvent::MouseInput {
@@ -350,26 +347,18 @@ impl State {
 
     fn update(&mut self, dt: std::time::Duration) {
         // Update camera
-        self.render_state.camera_state.camera_controller.update_camera(&mut self.render_state.camera_state.camera, dt);
-        self.render_state.camera_state.camera_uniform
-            .update_view_proj(&self.render_state.camera_state.camera);
+        self.camera_controller.update_camera(&mut self.scene.camera, dt);
         self.update_scene(dt);
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn update_view_proj_webxr(&mut self, projection: &cgmath::Matrix4<f32>, pos: &cgmath::Vector3<f32>, rot: &cgmath::Quaternion<f32>) {
-        self.render_state.camera_state.camera_uniform.update_view_proj_webxr(&projection, &pos, &rot);
     }
 
     fn update_scene(&mut self, dt: std::time::Duration) {
         // Update the light
-        let old_position: cgmath::Vector3<_> = self.render_state.light.uniform.position.into();
+        let old_position: cgmath::Vector3<_> = self.scene.light.position;
         let deg_per_sec = 90.;
         let deg = cgmath::Deg(deg_per_sec * dt.as_secs_f32());
-        self.render_state.light.uniform.position =
-            (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
-                * old_position)
-                .into();
+        self.scene.light.position =
+            cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
+                * old_position;
     }
 
     fn render_to_surface(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -391,9 +380,9 @@ impl State {
             &depth_view,
             &self.render_state.device,
             &self.render_state.queue,
-            &self.render_state.nodes,
-            &self.render_state.camera_state.camera_uniform,
-            &self.render_state.light.uniform,
+            &self.scene.nodes,
+            &self.scene.camera,
+            &self.scene.light,
             viewport,
             clear
         );
@@ -456,7 +445,7 @@ async fn run_windowed(webxr: bool) {
                 event: DeviceEvent::MouseMotion{ delta, },
                 .. // We're not using device_id currently
             } => if state.window_state.mouse_pressed {
-                state.render_state.camera_state.camera_controller.process_mouse(delta.0, delta.1)
+                state.camera_controller.process_mouse(delta.0, delta.1)
             }
             Event::WindowEvent {
                 ref event,

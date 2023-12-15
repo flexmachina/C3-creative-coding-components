@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use wgpu::{util::DeviceExt, BindGroupLayout, Device, Queue};
 
 use crate::{
-    camera::CameraUniform,
+    camera::{Camera,CameraUniform},
     instance::{Instance, InstanceRaw},
     light::{Light, LightUniform},
     model::{self, DrawModel, Vertex},
@@ -19,24 +19,22 @@ pub struct PhongConfig {
 }
 
 pub struct PhongPass {
+    webxr: bool,
     // Common uniform buffers
     pub camera_buffer: wgpu::Buffer,
     pub light_buffer: wgpu::Buffer,
-
+    // Instances
+    instance_buffers: HashMap<usize, wgpu::Buffer>,
     // Phong pipeline
     pub phong_global_bind_group_layout: BindGroupLayout,
     pub phong_global_bind_group: wgpu::BindGroup,
     pub phong_local_bind_group_layout: BindGroupLayout,
     phong_local_bind_groups: HashMap<usize, wgpu::BindGroup>,
     pub phong_render_pipeline: wgpu::RenderPipeline,
-
     // Light pipeline
     pub light_global_bind_group_layout: BindGroupLayout,
     pub light_global_bind_group: wgpu::BindGroup,
     pub light_render_pipeline: wgpu::RenderPipeline,
-
-    // Instances
-    instance_buffers: HashMap<usize, wgpu::Buffer>,
 }
 
 impl PhongPass {
@@ -101,10 +99,11 @@ impl PhongPass {
             mapped_at_creation: false,
         });
 
-        let temp_light = Light::new([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]);
+         // TODO: how do you make a zero buffer of size(LightUniform)?
+        let temp_light = Light {position: (0.0, 0.0, 0.0).into(), color: (0.0, 0.0, 0.0).into()};
         let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("[Phong] Light"),
-            contents: bytemuck::cast_slice(&[temp_light.uniform]),
+            contents: bytemuck::cast_slice(&[temp_light.to_uniform()]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -336,8 +335,11 @@ impl PhongPass {
         let instance_buffers = HashMap::new();
 
         PhongPass {
+            webxr,
+
             camera_buffer,
             light_buffer,
+            instance_buffers,
 
             phong_global_bind_group_layout,
             phong_global_bind_group,
@@ -348,8 +350,6 @@ impl PhongPass {
             light_global_bind_group,
             light_global_bind_group_layout,
             light_render_pipeline,
-
-            instance_buffers,
         }
     }
 }
@@ -362,21 +362,28 @@ impl Pass for PhongPass {
         device: &Device,
         queue: &Queue,
         nodes: &Vec<Node>,
-        camera_uniform: &CameraUniform,
-        light_uniform: &LightUniform,
+        camera: &Camera,
+        light: &Light,
         viewport: Option<Rect>,
         clear: bool
     ) -> wgpu::CommandBuffer {
+
         queue.write_buffer(
             &self.light_buffer,
             0,
-            bytemuck::cast_slice(&[*light_uniform]),
+            bytemuck::cast_slice(&[light.to_uniform()]),
         );
+
+        let camera_uniform = if self.webxr {
+                camera.xr_camera.to_uniform()
+            } else {
+                camera.to_uniform()
+            };
 
         queue.write_buffer(
             &self.camera_buffer,
             0,
-            bytemuck::cast_slice(&[*camera_uniform]),
+            bytemuck::cast_slice(&[camera_uniform]),
         );
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
