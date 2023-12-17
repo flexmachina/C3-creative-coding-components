@@ -3,11 +3,13 @@ mod camera;
 mod instance;
 mod light;
 mod model;
+mod node;
+mod pass;
+mod phong;
 mod shader_utils;
 mod texture;
 #[cfg(target_arch = "wasm32")]
 mod utils;
-mod wgpu_utils;
 #[cfg(target_arch = "wasm32")]
 mod xr;
 
@@ -17,9 +19,9 @@ use std::rc::Rc;
 use cgmath::prelude::*;
 #[allow(unused_imports)]
 use log::{debug,error,info};
+use pass::Pass;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
-use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget},
@@ -28,33 +30,38 @@ use winit::{
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
-use camera::CameraState;
-use model::{DrawLight, DrawModel, Vertex};
-use instance::{Instance, InstanceRaw};
+use instance::Instance;
+use node::Node;
+
+use crate::phong::PhongConfig;
 
 const NUM_INSTANCES_PER_ROW: u32 = 10;
+
+pub struct Rect {
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32
+}
 
 struct RenderState {
     device: wgpu::Device,
     queue: wgpu::Queue,
-    render_pipeline: wgpu::RenderPipeline,
     #[allow(dead_code)]
     color_format: wgpu::TextureFormat,
     depth_texture: texture::Texture,
-    camera_state: CameraState,
 
-    obj_model: model::Model,
-    instances: Vec<Instance>,
-    #[allow(dead_code)]
-    instance_buffer: wgpu::Buffer,
-    light: light::Light,
-    light_render_pipeline: wgpu::RenderPipeline,
-    #[allow(dead_code)]
-    debug_material: model::Material,
+    phong_pass: phong::PhongPass,
 }
 
-pub struct WindowState
-{
+// Entities in world
+struct Scene {
+    light: light::Light,
+    camera: camera::Camera,
+    nodes: Vec<Node>,
+}
+
+pub struct WindowState {
     surface: wgpu::Surface,
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
@@ -62,13 +69,6 @@ pub struct WindowState
     cursor_pos: winit::dpi::PhysicalPosition<f64>,
     mouse_pressed: bool,
     window: Window,
-}
-
-pub struct Rect {
-    x: f32,
-    y: f32,
-    w: f32,
-    h: f32
 }
 
 pub struct App {
@@ -102,56 +102,30 @@ impl App {
 }
 pub struct State {
     render_state: RenderState,
-    window_state: WindowState
+    window_state: WindowState,
+    camera_controller: camera::CameraController,
+    scene: Scene,
 }
 
-async fn create_redner_state(
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    color_format: wgpu::TextureFormat,
+async fn create_scene(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
     width: u32,
-    height: u32,
-    webxr: bool) -> RenderState
-{
-    let texture_bind_group_layout =
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    multisampled: false,
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-            // normal map
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    multisampled: false,
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 3,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-        ],
-        label: Some("texture_bind_group_layout"),
-    });
+    height: u32) -> Scene {
+
+    let light = light::Light{
+        position: (2.0, 2.0, 2.0).into(),
+        color: (1.0, 1.0, 1.0).into()
+    };
+
+    let projection = camera::Projection::new(
+        width, height, 
+        cgmath::Deg(45.0), 0.1, 100.0);
+    let camera = camera::Camera::new(
+        (0.0, 0.0, 0.0), 
+        cgmath::Deg(0.0), 
+        cgmath::Deg(0.0),
+        projection);
 
     const SPACE_BETWEEN: f32 = 3.0;
     let instances = (0..NUM_INSTANCES_PER_ROW)
@@ -176,125 +150,52 @@ async fn create_redner_state(
         })
         .collect::<Vec<_>>();
 
-    let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-    let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Instance Buffer"),
-        contents: bytemuck::cast_slice(&instance_data),
-        usage: wgpu::BufferUsages::VERTEX,
-    });
-
-
+    // TODO: Use resource id instead?
     let obj_model: model::Model =
-        assets::load_model("cube.obj", &device, &queue, &texture_bind_group_layout)
+        assets::load_model("cube.obj", &device, &queue)
             .await
             .unwrap();
 
-    let light = light::Light::new(&device, [2.0, 2.0, 2.0], [1.0, 1.0, 1.0]);
-
-    let debug_material = {
-        let diffuse_bytes = include_bytes!("../res/cobble-diffuse.png");
-        let normal_bytes = include_bytes!("../res/cobble-normal.png");
-
-        let diffuse_texture = texture::Texture::from_bytes(
-            &device,
-            &queue,
-            diffuse_bytes,
-            "res/alt-diffuse.png",
-            false,
-        )
-        .unwrap();
-        let normal_texture = texture::Texture::from_bytes(
-            &device,
-            &queue,
-            normal_bytes,
-            "res/alt-normal.png",
-            true,
-        )
-        .unwrap();
-
-        model::Material::new(
-            &device,
-            "alt-material",
-            diffuse_texture,
-            normal_texture,
-            &texture_bind_group_layout,
-        )
+    let obj_node = Node {
+        model: obj_model,
+        instances: instances
     };
+    let nodes = vec![obj_node];
+
+    Scene {
+        light,
+        camera,
+        nodes
+    }
+}
+
+async fn create_redner_state(
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    color_format: wgpu::TextureFormat,
+    width: u32,
+    height: u32,
+    webxr: bool) -> RenderState {
 
     let depth_texture = 
     texture::Texture::create_depth_texture(&device, width, height, "depth_texture");
 
-    let camera_state = camera::CameraState::new(&device, width, height);
-
-    let render_pipeline_layout =
-    device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-        label: Some("Render Pipeline Layout"),
-        bind_group_layouts: &[
-            &texture_bind_group_layout,
-            &camera_state.camera_bind_group_layout,
-            &light.bind_group_layout,
-        ],
-        push_constant_ranges: &[],
-    });
-
-    let mut shader_composer = shader_utils::init_composer();
-    let render_pipeline = {
-        let shader = wgpu::ShaderModuleDescriptor {
-            label: Some("Phong Shader"),
-            source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                shader_utils::load_shader!(&mut shader_composer, "phong.wgsl", webxr)
-            ))
-        };
-        wgpu_utils::create_render_pipeline(
-            &device,
-            &render_pipeline_layout,
-            color_format,
-            Some(texture::Texture::DEPTH_FORMAT),
-            &[model::ModelVertex::desc(), InstanceRaw::desc()],
-            shader,
-            webxr
-        )
+    let phong_config = PhongConfig {
+        wireframe: false,
     };
-
-    let light_render_pipeline = {
-        let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Light Pipeline Layout"),
-            bind_group_layouts: &[&camera_state.camera_bind_group_layout, &light.bind_group_layout],
-            push_constant_ranges: &[],
-        });
-        let shader = wgpu::ShaderModuleDescriptor {
-            label: Some("Light Shader"),
-            source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                shader_utils::load_shader!(&mut shader_composer, "light.wgsl", webxr)
-            ))
-        };
-        wgpu_utils::create_render_pipeline(
-            &device,
-            &layout,
-            color_format,
-            Some(texture::Texture::DEPTH_FORMAT),
-            &[model::ModelVertex::desc()],
-            shader,
-            webxr
-        )
-    };
-
-
+    let phong_pass = phong::PhongPass::new(
+        &phong_config,
+        &device,
+        color_format,
+        webxr
+    );
 
     return RenderState { 
         device,
         queue, 
-        render_pipeline,
         color_format,
         depth_texture,
-        camera_state,
-
-        obj_model,
-        instances,
-        instance_buffer,
-        light,
-        light_render_pipeline,
-        debug_material,
+        phong_pass,
     }
 }
 
@@ -382,11 +283,16 @@ impl State {
 
         let cursor_pos = winit::dpi::PhysicalPosition {x:0.0, y:0.0};
 
+        let scene = create_scene(&device, &queue, size.width, size.height).await;
+
         let render_state = create_redner_state(device, queue, surface_format, size.width, size.height, webxr).await;
         let window_state = WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false};
+        let camera_controller = camera::CameraController::new(4.0, 0.4);
         Self {
             render_state,
-            window_state
+            window_state,
+            camera_controller,
+            scene
         }
     }
 
@@ -397,7 +303,7 @@ impl State {
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
-            self.render_state.camera_state.projection.resize(new_size.width, new_size.height);
+            self.scene.camera.projection.resize(new_size.width, new_size.height);
             let window_state = &mut self.window_state;
             window_state.size = new_size;
             window_state.config.width = new_size.width;
@@ -421,9 +327,9 @@ impl State {
                         ..
                     },
                 ..
-            } => self.render_state.camera_state.camera_controller.process_keyboard(*key, *state),
+            } => self.camera_controller.process_keyboard(*key, *state),
             WindowEvent::MouseWheel { delta, .. } => {
-                self.render_state.camera_state.camera_controller.process_scroll(delta);
+                self.camera_controller.process_scroll(delta);
                 true
             }
             WindowEvent::MouseInput {
@@ -440,42 +346,18 @@ impl State {
 
     fn update(&mut self, dt: std::time::Duration) {
         // Update camera
-        self.render_state.camera_state.camera_controller.update_camera(&mut self.render_state.camera_state.camera, dt);
-        self.render_state.camera_state.camera_uniform
-            .update_view_proj(&self.render_state.camera_state.camera, &self.render_state.camera_state.projection);
-        self.update_camera_buffer();
-        
+        self.camera_controller.update_camera(&mut self.scene.camera, dt);
         self.update_scene(dt);
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    fn update_view_proj_webxr(&mut self, projection: &cgmath::Matrix4<f32>, pos: &cgmath::Vector3<f32>, rot: &cgmath::Quaternion<f32>) {
-        self.render_state.camera_state.camera_uniform.update_view_proj_webxr(&projection, &pos, &rot);
-        self.update_camera_buffer();
-    }
-
-    fn update_camera_buffer(&mut self) {
-        self.render_state.queue.write_buffer(
-            &self.render_state.camera_state.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[self.render_state.camera_state.camera_uniform]),
-        );
     }
 
     fn update_scene(&mut self, dt: std::time::Duration) {
         // Update the light
-        let old_position: cgmath::Vector3<_> = self.render_state.light.uniform.position.into();
+        let old_position: cgmath::Vector3<_> = self.scene.light.position;
         let deg_per_sec = 90.;
         let deg = cgmath::Deg(deg_per_sec * dt.as_secs_f32());
-        self.render_state.light.uniform.position =
-            (cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
-                * old_position)
-                .into();
-        self.render_state.queue.write_buffer(
-            &self.render_state.light.buffer,
-            0,
-            bytemuck::cast_slice(&[self.render_state.light.uniform]),
-        );
+        self.scene.light.position =
+            cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
+                * old_position;
     }
 
     fn render_to_surface(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -492,70 +374,20 @@ impl State {
             Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
             _ => self.render_state.depth_texture.texture.create_view(&wgpu::TextureViewDescriptor::default())
         };
-        let mut encoder = self.render_state.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
-
-        {
-            let mut render_pass: wgpu::RenderPass<'_> = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &color_view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load:
-                            if clear {
-                                wgpu::LoadOp::Clear(wgpu::Color {
-                                    r: 0.1,
-                                    g: 0.2,
-                                    b: 0.3,
-                                    a: 1.0,
-                                })
-                            } else {
-                                wgpu::LoadOp::Load
-                            },
-                        store: true,
-                    }
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load:
-                            if clear {
-                                wgpu::LoadOp::Clear(1.0)
-                            } else {
-                                wgpu::LoadOp::Load
-                            },
-                        store: true
-                    }),
-                    stencil_ops: None,
-                }),
-            });
-
-            match viewport {
-                Some(v) => { render_pass.set_viewport(v.x, v.y, v.w, v.h, 0.0, 1.0); }
-                _ => {}
-            };
-
-            render_pass.set_vertex_buffer(1, self.render_state.instance_buffer.slice(..));
-            render_pass.set_pipeline(&self.render_state.light_render_pipeline);
-            render_pass.draw_light_model(
-                &self.render_state.obj_model,
-                &self.render_state.camera_state.camera_bind_group,
-                &self.render_state.light.bind_group,
-            );
-
-            render_pass.set_pipeline(&self.render_state.render_pipeline);
-            render_pass.draw_model_instanced(
-                &self.render_state.obj_model,
-                0..self.render_state.instances.len() as u32,
-                &self.render_state.camera_state.camera_bind_group,
-                &self.render_state.light.bind_group,
-            );
-        }
-
+        let command_buffer  = self.render_state.phong_pass.draw(
+            &color_view,
+            &depth_view,
+            &self.render_state.device,
+            &self.render_state.queue,
+            &self.scene.nodes,
+            &self.scene.camera,
+            &self.scene.light,
+            viewport,
+            clear
+        );
+        
         // submit will accept anything that implements IntoIter
-        self.render_state.queue.submit(std::iter::once(encoder.finish()));
+        self.render_state.queue.submit(std::iter::once(command_buffer));
     }
 }
 
@@ -612,7 +444,7 @@ async fn run_windowed(webxr: bool) {
                 event: DeviceEvent::MouseMotion{ delta, },
                 .. // We're not using device_id currently
             } => if state.window_state.mouse_pressed {
-                state.render_state.camera_state.camera_controller.process_mouse(delta.0, delta.1)
+                state.camera_controller.process_mouse(delta.0, delta.1)
             }
             Event::WindowEvent {
                 ref event,

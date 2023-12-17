@@ -6,14 +6,14 @@ struct Camera {
     view_pos: vec4<f32>,
     view_proj: mat4x4<f32>,
 }
-@group(1) @binding(0)
+@group(0) @binding(0)
 var<uniform> camera: Camera;
 
 struct Light {
     position: vec3<f32>,
     color: vec3<f32>,
 }
-@group(2) @binding(0)
+@group(0) @binding(1)
 var<uniform> light: Light;
 
 struct VertexInput {
@@ -81,14 +81,16 @@ fn vs_main(
 
 // Fragment shader
 
-@group(0) @binding(0)
-var t_diffuse: texture_2d<f32>;
-@group(0)@binding(1)
+// This grabs the sampler from the Global uniform
+@group(0) @binding(2)
 var s_diffuse: sampler;
-@group(0)@binding(2)
-var t_normal: texture_2d<f32>;
 @group(0) @binding(3)
 var s_normal: sampler;
+
+@group(1) @binding(0)
+var t_diffuse: texture_2d<f32>;
+@group(1) @binding(1)
+var t_normal: texture_2d<f32>;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {

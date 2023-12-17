@@ -74,7 +74,6 @@ pub async fn load_model(
     file_name: &str,
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    layout: &wgpu::BindGroupLayout,
 ) -> anyhow::Result<model::Model> {
     let obj_text = load_string(file_name).await?;
     let obj_cursor = Cursor::new(obj_text);
@@ -100,11 +99,9 @@ pub async fn load_model(
         let normal_texture = load_texture(&m.normal_texture, true, device, queue).await?;
 
         materials.push(model::Material::new(
-            device,
             &m.name,
             diffuse_texture,
-            normal_texture,
-            layout,
+            normal_texture
         ));
     }
 
