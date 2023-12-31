@@ -43,7 +43,7 @@ impl PhongPass {
         device: &wgpu::Device,
         color_format: wgpu::TextureFormat,
         webxr: bool
-    ) -> PhongPass {
+    ) -> Self {
         // Setup global uniforms
         // Global bind group layout
         let light_size = std::mem::size_of::<LightUniform>() as wgpu::BufferAddress;
@@ -364,8 +364,9 @@ impl Pass for PhongPass {
         nodes: &Vec<Node>,
         camera: &Camera,
         light: &Light,
-        viewport: Option<Rect>,
-        clear: bool
+        viewport: &Option<Rect>,
+        clear_color: bool,
+        clear_depth: bool
     ) -> wgpu::CommandBuffer {
 
         queue.write_buffer(
@@ -400,7 +401,7 @@ impl Pass for PhongPass {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load:
-                            if clear {wgpu::LoadOp::Clear(wgpu::Color::BLACK) }
+                            if clear_color {wgpu::LoadOp::Clear(wgpu::Color::BLACK) }
                             else { wgpu::LoadOp::Load },
                         store: true,
                     }
@@ -409,7 +410,7 @@ impl Pass for PhongPass {
                     view: &depth_view,
                     depth_ops: Some(wgpu::Operations {
                         load:
-                            if clear {wgpu::LoadOp::Clear(1.0)} 
+                            if clear_depth {wgpu::LoadOp::Clear(1.0)} 
                             else { wgpu::LoadOp::Load},
                         store: true
                     }),

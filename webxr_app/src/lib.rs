@@ -7,9 +7,11 @@ mod node;
 mod pass;
 mod phong;
 mod shader_utils;
+mod skybox;
 mod texture;
 #[cfg(target_arch = "wasm32")]
 mod utils;
+mod wgpu_ext;
 #[cfg(target_arch = "wasm32")]
 mod xr;
 
@@ -19,7 +21,6 @@ use std::rc::Rc;
 use cgmath::prelude::*;
 #[allow(unused_imports)]
 use log::{debug,error,info};
-use pass::Pass;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 use winit::{
@@ -32,8 +33,8 @@ use winit::platform::web::EventLoopExtWebSys;
 
 use instance::Instance;
 use node::Node;
-
-use crate::phong::PhongConfig;
+use pass::Pass;
+use phong::PhongConfig;
 
 const NUM_INSTANCES_PER_ROW: u32 = 10;
 
@@ -51,7 +52,10 @@ struct RenderState {
     color_format: wgpu::TextureFormat,
     depth_texture: texture::Texture,
 
+    skybox_texture: texture::Texture,
+
     phong_pass: phong::PhongPass,
+    skybox_pass: skybox::SkyboxPass,
 }
 
 // Entities in world
@@ -190,12 +194,26 @@ async fn create_redner_state(
         webxr
     );
 
+    let skybox_texture = texture::Texture::load_cubemap(&device, &queue).await;
+    let skybox_config = skybox::SkyboxConfig {
+        texture: &skybox_texture
+    };
+    
+    let skybox_pass = skybox::SkyboxPass::new(
+        &device,
+        &skybox_config,
+        color_format,
+        webxr
+    );
+
     return RenderState { 
         device,
         queue, 
         color_format,
         depth_texture,
+        skybox_texture,
         phong_pass,
+        skybox_pass,
     }
 }
 
@@ -374,7 +392,7 @@ impl State {
             Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
             _ => self.render_state.depth_texture.texture.create_view(&wgpu::TextureViewDescriptor::default())
         };
-        let command_buffer  = self.render_state.phong_pass.draw(
+        let command_buffer1 = self.render_state.skybox_pass.draw(
             &color_view,
             &depth_view,
             &self.render_state.device,
@@ -382,12 +400,25 @@ impl State {
             &self.scene.nodes,
             &self.scene.camera,
             &self.scene.light,
-            viewport,
-            clear
+            &viewport,
+            clear,
+            clear,
         );
         
-        // submit will accept anything that implements IntoIter
-        self.render_state.queue.submit(std::iter::once(command_buffer));
+        let command_buffer2 = self.render_state.phong_pass.draw(
+            &color_view,
+            &depth_view,
+            &self.render_state.device,
+            &self.render_state.queue,
+            &self.scene.nodes,
+            &self.scene.camera,
+            &self.scene.light,
+            &viewport,
+            false,
+            clear);
+
+            // submit will accept anything that implements IntoIter
+            self.render_state.queue.submit([command_buffer1, command_buffer2]);
     }
 }
 

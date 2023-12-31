@@ -1,5 +1,10 @@
 use anyhow::*;
 use image::GenericImageView;
+use wgpu::{AstcBlock, AstcChannel};
+
+use crate::assets;
+use crate::wgpu_ext::device::{DeviceExt, TextureDataOrder};
+
 
 pub struct Texture {
     pub texture: wgpu::Texture,
@@ -128,5 +133,107 @@ impl Texture {
             view,
             sampler,
         })
+    }
+
+    pub async fn load_cubemap(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+        let device_features = device.features();
+
+        let skybox_format = if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_ASTC) {
+            log::info!("Using astc");
+            wgpu::TextureFormat::Astc {
+                block: AstcBlock::B4x4,
+                channel: AstcChannel::UnormSrgb,
+            }
+        } else if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_ETC2) {
+            log::info!("Using etc2");
+            wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb
+        } else if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_BC) {
+            log::info!("Using bc7");
+            wgpu::TextureFormat::Bc7RgbaUnormSrgb
+        } else {
+            log::info!("Using rgba8");
+            wgpu::TextureFormat::Rgba8UnormSrgb
+        };
+
+        let filename = match skybox_format {
+            wgpu::TextureFormat::Astc {
+                block: AstcBlock::B4x4,
+                channel: AstcChannel::UnormSrgb,
+            } => "astc.ktx2",
+            wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb => "etc2.ktx2",
+            wgpu::TextureFormat::Bc7RgbaUnormSrgb => "bc7.ktx2",
+            wgpu::TextureFormat::Rgba8UnormSrgb => "rgba8.ktx2",
+            _ => unreachable!(),
+        };
+
+        let bytes = assets::load_binary(filename).await.unwrap();
+
+        let reader = ktx2::Reader::new(bytes).unwrap();
+        let header = reader.header();
+
+        let size = wgpu::Extent3d {
+            width: header.pixel_width,
+            height: header.pixel_height,
+            depth_or_array_layers: 6,
+        };
+
+        let layer_size = wgpu::Extent3d {
+            depth_or_array_layers: 1,
+            ..size
+        };
+        let max_mips = layer_size.max_mips(wgpu::TextureDimension::D2);
+
+        log::debug!(
+            "Copying {:?} skybox images of size {}, {}, 6 with {} mips to gpu",
+            skybox_format,
+            header.pixel_width,
+            header.pixel_height,
+            max_mips,
+        );
+
+        let mut image = Vec::with_capacity(reader.data().len());
+        for level in reader.levels() {
+            image.extend_from_slice(level);
+        }
+
+        let texture = device.create_texture_with_data(
+            queue,
+            &wgpu::TextureDescriptor {
+                size,
+                mip_level_count: header.level_count,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: skybox_format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                label: None,
+                view_formats: &[],
+            },
+            // KTX2 stores mip levels in mip major order 
+            // Specifying this order is only available in wgpu 0.18
+            // but we're not ready to upgrade yet so a workaround is to backport
+            // this functionality (see crate::wgpu_ext::device).
+            TextureDataOrder::MipMajor,
+            &image,
+        );
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(wgpu::TextureViewDimension::Cube),
+            ..wgpu::TextureViewDescriptor::default()
+        });
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        Self {
+            texture,
+            view,
+            sampler,
+        }
     }
 }

@@ -14,7 +14,8 @@ pub trait Pass {
         nodes: &Vec<Node>,
         camera: &Camera,
         light: &Light,
-        viewport: Option<Rect>,
-        clear: bool
+        viewport: &Option<Rect>,
+        clear_color: bool,
+        clear_depth: bool,
     ) -> wgpu::CommandBuffer;
 }

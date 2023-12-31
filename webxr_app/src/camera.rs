@@ -1,4 +1,4 @@
-use cgmath::*;
+use cgmath::{*, Zero};
 #[allow(unused_imports)]
 use log::{error};
 use std::f32::consts::FRAC_PI_2;
@@ -70,16 +70,24 @@ impl Camera {
     pub fn to_uniform(&self) -> CameraUniform {
         CameraUniform {
             view_position: self.position.to_homogeneous().into(),
-            view_proj: (self.projection.calc_matrix() * self.calc_matrix()).into()
+            view_proj: self.view_proj().into()
         }
     }
 
-    fn calc_matrix(&self) -> Matrix4<f32> {
+    pub fn view_proj(&self) -> Matrix4<f32> {
+        self.projection.calc_matrix() * self.calc_matrix(self.position)
+    }
+
+    pub fn view_proj_skybox(&self) -> Matrix4<f32> {
+        self.projection.calc_matrix() * self.calc_matrix(Point3::origin())
+    }
+
+    fn calc_matrix(&self, position: Point3<f32>) -> Matrix4<f32> {
         let (sin_pitch, cos_pitch) = self.pitch.0.sin_cos();
         let (sin_yaw, cos_yaw) = self.yaw.0.sin_cos();
 
         Matrix4::look_to_lh(
-            self.position,
+            position,
             Vector3::new(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw).normalize(),
             Vector3::unit_y(),
         )
@@ -88,34 +96,42 @@ impl Camera {
 
 #[derive(Debug)]
 pub struct XrCamera {
-    pub position: Vector3<f32>,
+    pub position: Point3<f32>,
     pub rotation: Quaternion<f32>,
     pub projection: Matrix4<f32>,
 }
 
 impl XrCamera {
     pub fn to_uniform(&self) -> CameraUniform {
+        // TODO verify this is correct
+        let pos = self.position * -1.;
+
+        CameraUniform {
+            view_position: pos.to_homogeneous().into(),
+            view_proj: self.view_proj().into()
+        }
+    }
+
+    pub fn view_proj_skybox(&self) -> Matrix4<f32> {
+        // See below for explanation of the maths
+        let rot = self.rotation.conjugate();
+        let view = Matrix4::from(Matrix3::from(rot));
+        FLIPY_MATRIX * self.projection * view
+    }
+
+    pub fn view_proj(&self) -> Matrix4<f32> {
         // Dealing with the WebXR coordinate system needs to be taken with care as there are a few complications that
         // arise from performating rendering with wgpu directly to a WebGL framebuffer.
-        // The WebXR projection matrix, position and orientation passed into this function need to be manipulated because in WebXR 
-        // framebuffer has a flipped Y coordinate. We therefore:
+        // The WebXR projection matrix, position and orientation memebrs of this struct need to be manipulated because in WebXR 
+        // the framebuffer has a flipped Y coordinate. We therefore:
         // 1. Pre-mutiply the projection by FLIPY_MATRIX which inverts the y coordinate in clip space. 
         // 2. Invert the triangle winding order to CW (see create_render_pipeline())
         // 3. Invert the rotation directions to account for the inverted Y
-        // 4. Invert the position - not sure this is related to flipping Y, but seems necessary
+        // 4. Invert the position - not sure if this is related to flipping Y, but it seems necessary
         let pos = self.position * -1.;
-        
-        // TODO verify this is correct
-        let view_position = [pos.x, pos.y, pos.z, 1.0];
-
         let rot = self.rotation.conjugate();
-        let view = Matrix4::from(Matrix3::from(rot)) * Matrix4::from_translation(pos);
-        let view_proj = (FLIPY_MATRIX * self.projection * view).into();
-
-        CameraUniform {
-            view_position,
-            view_proj
-        }
+        let view = Matrix4::from(Matrix3::from(rot)) * Matrix4::from_translation(pos.to_vec());
+        FLIPY_MATRIX * self.projection * view
     }
 }
 
@@ -142,7 +158,13 @@ impl Projection {
     }
 
     pub fn calc_matrix(&self) -> Matrix4<f32> {
-        OPENGL_TO_WGPU_MATRIX * perspective(self.fovy, self.aspect, self.znear, self.zfar)
+        // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
+        // skybox rendering.
+        // TODO: Add this back for other rendering.
+        // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be halfway inside the clipping area.
+        // This is only an issue if you aren't using a camera matrix.
+        //OPENGL_TO_WGPU_MATRIX * 
+        perspective(self.fovy, self.aspect, self.znear, self.zfar)
     }
 }
 

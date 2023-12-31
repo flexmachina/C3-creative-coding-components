@@ -177,7 +177,7 @@ impl XrApp {
 
                 // Get decomposed position and orientation as they are easier to operate on than the view matrix
                 let pos = view.transform().position();
-                let position = cgmath::Vector3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
+                let position = cgmath::Point3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
                 let r = view.transform().orientation();
                 let rotation = cgmath::Quaternion::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
 
