@@ -8,6 +8,22 @@ use crate::shaders::{SkyboxShader, SkyboxShaderParams};
 use crate::texture::Texture;
 use bevy_ecs::prelude::*;
 
+
+#[derive(Component)]
+pub struct SkyboxSpec {
+    skyboxpath: String,
+}
+
+impl SkyboxSpec {
+    pub fn new(skyboxpath: String) -> SkyboxSpec {
+        Self {
+            skyboxpath
+        }
+    }
+}
+
+
+
 #[derive(Component)]
 pub struct Skybox;
 
@@ -38,6 +54,17 @@ impl Skybox {
 
         let transform = Transform::default();
 
-        commands.spawn((Skybox, RenderOrder(-100), renderer, transform));
+        let skyboxspec = SkyboxSpec::new(String::from("skybox_bgra.dds"));
+
+
+        commands.spawn((Skybox, RenderOrder(-100), renderer, transform, skyboxspec));
     }
 }
+
+
+
+
+
+
+
+

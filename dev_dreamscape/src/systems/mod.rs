@@ -2,6 +2,7 @@
 //mod handle_system_events;
 //mod init_app;
 mod render;
+mod global_render;
 mod update_input_state;
 //mod grab_cursor;
 mod schedules;
@@ -17,6 +18,7 @@ use winit::event::{VirtualKeyCode};
 //pub use handle_system_events::handle_system_events;
 //pub use init_app::init_app;
 pub use render::render;
+pub use global_render::global_render;
 pub use update_input_state::update_input_state;
 //pub use grab_cursor::grab_cursor;
 pub use schedules::*;
