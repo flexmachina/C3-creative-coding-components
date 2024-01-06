@@ -49,14 +49,9 @@ impl Skybox {
             },
         );
         let mesh = Mesh::quad(&device);
-
         let renderer = MeshRenderer::new(mesh, ShaderVariant::Skybox(shader), RenderTags::SCENE);
-
         let transform = Transform::default();
-
         let skyboxspec = SkyboxSpec::new(String::from("skybox_bgra.dds"));
-
-
         commands.spawn((Skybox, RenderOrder(-100), renderer, transform, skyboxspec));
     }
 }

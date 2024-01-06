@@ -1,10 +1,19 @@
 use crate::components::{Camera, MeshRenderer, RenderOrder, Transform, Player, MeshSpec, SkyboxSpec};
+use crate::mesh::Mesh;
+use crate::assets::Assets;
+use crate::components::{ShaderVariant};
+
 //use crate::debug_ui::DebugUI;
 use crate::device::Device;
 use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use wgpu::RenderBundle;
 use crate::render_tags::RenderTags;
+
+use crate::shaders::{SkyboxShader, SkyboxShaderParams};
+use crate::shaders::{PostProcessShader, PostProcessShaderParams};
+use crate::shaders::{DiffuseShader, DiffuseShaderParams};
+
 
 fn render_pass(
     device: &Device,
@@ -142,20 +151,70 @@ pub fn render(
 }
 
 
-pub fn global_render(
+
+
+
+
+pub fn global_prepare_render_pipelines(
     device: Res<Device>,
-    player_cam_qry: Query<&Camera, With<Player>>,
-    mut meshes: Query<(&Transform, Option<&RenderOrder>, &MeshSpec)>,
-    mut skyboxes: Query<(&Transform, Option<&RenderOrder>, &MeshSpec)>,
+    assets: Res<Assets>,
+    mut commands: Commands,
+    player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
 ) {
 
-    let player_cam = player_cam_qry.single_mut();
-    let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.target().as_ref());
+    //Leave as single pipeline to render skybox
+    let skybox_shader = SkyboxShader::new(&device,SkyboxShaderParams {texture: &assets.skybox_tex,});
+    let skybox_mesh = Mesh::quad(&device);
+    let skybox_renderer = MeshRenderer::new(skybox_mesh, ShaderVariant::Skybox(skybox_shader), RenderTags::SCENE);
+    let skybox_transform = Transform::default();
 
 
+    //Make a pipeline for rendering all other mesh objects?
+    let diffuse_shader = DiffuseShader::new(&device,DiffuseShaderParams {texture: &assets.stone_tex,});
+    let diffuse_mesh = Mesh::from_string(assets.cube_mesh_string.clone(), &device);
+    let diffuse_renderer = MeshRenderer::new(diffuse_mesh, ShaderVariant::Diffuse(diffuse_shader), RenderTags::SCENE);
 
     /*
-    let mut encoder = new_bundle_encoder(device, camera.0.target().as_ref());
+    //leave as is for Post Processing, can get rid of post process shader camera?
+    let source_camera_rt = player_cam_qry.single().target().as_ref().unwrap();
+
+    let mesh = Mesh::quad(&device);
+    let shader = PostProcessShader::new(&device,PostProcessShaderParams {
+                    texture: source_camera_rt.color_tex()
+                 });
+    let renderer = MeshRenderer::new(
+        mesh,
+        ShaderVariant::PostProcess(shader),
+        RenderTags::POST_PROCESS,
+    );
+    let transform = Transform::default();
+    let pp = PostProcessor { size: source_camera_rt.color_tex().size() };
+    commands.spawn((renderer, transform, pp));
+    // Camera for rendering the quad (and debug UI for that matter)
+    let camera = Camera::new(1.0, RenderTags::POST_PROCESS | RenderTags::DEBUG_UI, None);
+    let transform = Transform::default();
+    commands.spawn((RenderOrder(100), camera, transform));
+    */
+}
+
+
+
+
+pub fn global_render(
+    device: Res<Device>,
+    player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
+    mut meshes_qry: Query<(&MeshSpec, &Transform, Option<&RenderOrder>)>,
+    mut skyboxes_qry: Query<(&SkyboxSpec, &Transform, Option<&RenderOrder>)>,
+) {
+
+    let player_cam = player_cam_qry.single();
+    let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
+
+    let (skybox_spec, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
+   
+
+    /*
+    let mut encoder = new_bundle_encoder(device, camera.0.target().as_ref());    
     
     let player_cam = player_cam_qry.single_mut();
 
@@ -165,21 +224,20 @@ pub fn global_render(
         .collect::<Vec<_>>();
     */
 
+
+
     /*
-    let shader = SkyboxShader::new(&device,SkyboxShaderParams {texture: &assets.skybox_tex,});
-    let mesh = Mesh::quad(&device);
-    let renderer = MeshRenderer::new(mesh, ShaderVariant::Skybox(shader), RenderTags::SCENE);
-    let transform = Transform::default();
+     * Update the skybox based on 
+     *
+     */
+
+    /*
+     * For each mesh key in assets, make a pipeline to render all instances of the mesh
+     *
+     */
 
 
-    let shader = DiffuseShader::new(&device,DiffuseShaderParams {texture: &assets.stone_tex,});
-    let mesh = Mesh::from_string(assets.cube_mesh_string.clone(), &device);
-    let renderer = MeshRenderer::new(mesh, ShaderVariant::Diffuse(shader), RenderTags::SCENE);
-
-
-    let shader = DiffuseShader::new(device,DiffuseShaderParams {texture: &assets.stone_tex,});
-    let mesh = Mesh::from_string(assets.cube_mesh_string.clone(), device);
-    let renderer = MeshRenderer::new(mesh, ShaderVariant::Diffuse(shader), RenderTags::SCENE);
+    /*
 
 
 
