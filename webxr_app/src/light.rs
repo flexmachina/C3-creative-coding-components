@@ -1,4 +1,4 @@
-use cgmath::Vector3;
+use nalgebra::Vector3;
 
 // Uniform for light data (position + color)
 #[repr(C)]

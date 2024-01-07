@@ -100,7 +100,7 @@ impl PhongPass {
         });
 
          // TODO: how do you make a zero buffer of size(LightUniform)?
-        let temp_light = Light {position: (0.0, 0.0, 0.0).into(), color: (0.0, 0.0, 0.0).into()};
+        let temp_light = Light {position: [0.0, 0.0, 0.0].into(), color: [0.0, 0.0, 0.0].into()};
         let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("[Phong] Light"),
             contents: bytemuck::cast_slice(&[temp_light.to_uniform()]),

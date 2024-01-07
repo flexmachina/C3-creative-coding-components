@@ -18,7 +18,7 @@ mod xr;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use cgmath::prelude::*;
+use nalgebra::{Vector3, UnitQuaternion, UnitVector3};
 #[allow(unused_imports)]
 use log::{debug,error,info};
 #[cfg(target_arch = "wasm32")]
@@ -117,17 +117,17 @@ async fn create_scene(
     height: u32) -> Scene {
 
     let light = light::Light{
-        position: (2.0, 2.0, 2.0).into(),
-        color: (1.0, 1.0, 1.0).into()
+        position: [2.0, 2.0, 2.0].into(),
+        color: [1.0, 1.0, 1.0].into()
     };
 
     let projection = camera::Projection::new(
         width, height, 
-        cgmath::Deg(45.0), 0.1, 100.0);
+        45.0, 0.1, 100.0);
     let camera = camera::Camera::new(
-        (0.0, 0.0, 0.0), 
-        cgmath::Deg(0.0), 
-        cgmath::Deg(0.0),
+        [0.0, 0.0, 0.0], 
+        0.0, 
+        0.0,
         projection);
 
     const SPACE_BETWEEN: f32 = 3.0;
@@ -137,15 +137,16 @@ async fn create_scene(
                 let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
                 let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
 
-                let position = cgmath::Vector3 { x, y: 0.0, z };
+                let position = Vector3::new(x, 0.0, z);
 
-                let rotation = if position.is_zero() {
-                    cgmath::Quaternion::from_axis_angle(
-                        cgmath::Vector3::unit_z(),
-                        cgmath::Deg(0.0),
+                let rotation = if position == Vector3::zeros() {
+                    UnitQuaternion::from_axis_angle(
+                        &Vector3::z_axis(),
+                        0.0,
                     )
                 } else {
-                    cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+                    let angle: f32 = 45.0;
+                    UnitQuaternion::from_axis_angle(&UnitVector3::new_normalize(position), angle.to_radians())
                 };
 
                 Instance { position, rotation }
@@ -370,11 +371,11 @@ impl State {
 
     fn update_scene(&mut self, dt: std::time::Duration) {
         // Update the light
-        let old_position: cgmath::Vector3<_> = self.scene.light.position;
+        let old_position= self.scene.light.position;
         let deg_per_sec = 90.;
-        let deg = cgmath::Deg(deg_per_sec * dt.as_secs_f32());
+        let deg = deg_per_sec * dt.as_secs_f32();
         self.scene.light.position =
-            cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), deg)
+            UnitQuaternion::from_axis_angle(&Vector3::y_axis(), deg.to_radians())
                 * old_position;
     }
 

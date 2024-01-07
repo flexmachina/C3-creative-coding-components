@@ -1,4 +1,4 @@
-use cgmath::*;
+use nalgebra::Matrix4;
 use wgpu::{util::DeviceExt, Device, Queue};
 
 use crate::{
@@ -38,7 +38,7 @@ impl SkyboxPass {
         webxr: bool
     ) -> Self {
 
-        let uniform = Uniform{view_proj_inv: cgmath::Matrix4::identity().into()};
+        let uniform = Uniform{view_proj_inv: Matrix4::identity().into()};
 
         let (uniform_bind_group_layout, uniform_bind_group, uniform_buffer) =
             new_uniform_bind_group(device, bytemuck::cast_slice(&[uniform]));
@@ -136,7 +136,7 @@ impl Pass for SkyboxPass {
         };
 
         let uniform = Uniform { 
-            view_proj_inv: view_proj.inverse_transform().unwrap().into()
+            view_proj_inv: view_proj.try_inverse().unwrap().into()
         };
 
         queue.write_buffer(
