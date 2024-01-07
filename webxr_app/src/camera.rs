@@ -1,6 +1,6 @@
-use cgmath::{*, Zero};
+use cgmath::*;
 #[allow(unused_imports)]
-use log::{error};
+use log::error;
 use std::f32::consts::FRAC_PI_2;
 use std::time::Duration;
 use winit::dpi::PhysicalPosition;
@@ -8,6 +8,7 @@ use winit::event::*;
 
 
 #[rustfmt::skip]
+#[allow(dead_code)]
 pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
@@ -75,10 +76,17 @@ impl Camera {
     }
 
     pub fn view_proj(&self) -> Matrix4<f32> {
+        // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it seems
+        // to cause a sliding effect relative to the skybox
+        // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be 
+        // halfway inside the clipping area when the camera matrix is identity.
+        // OPENGL_TO_WGPU_MATRIX * 
         self.projection.calc_matrix() * self.calc_matrix(self.position)
     }
 
     pub fn view_proj_skybox(&self) -> Matrix4<f32> {
+        // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
+        // skybox rendering.
         self.projection.calc_matrix() * self.calc_matrix(Point3::origin())
     }
 
@@ -158,12 +166,6 @@ impl Projection {
     }
 
     pub fn calc_matrix(&self) -> Matrix4<f32> {
-        // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
-        // skybox rendering.
-        // TODO: Add this back for other rendering.
-        // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be halfway inside the clipping area.
-        // This is only an issue if you aren't using a camera matrix.
-        //OPENGL_TO_WGPU_MATRIX * 
         perspective(self.fovy, self.aspect, self.znear, self.zfar)
     }
 }

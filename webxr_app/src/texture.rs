@@ -1,5 +1,5 @@
 use anyhow::*;
-use image::GenericImageView;
+use image::{GenericImageView, RgbaImage};
 use wgpu::{AstcBlock, AstcChannel};
 
 use crate::assets;
@@ -135,38 +135,37 @@ impl Texture {
         })
     }
 
-    pub async fn load_cubemap(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+    #[allow(dead_code)]
+    pub async fn load_cubemap_from_ktx2(dir: &str, device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
         let device_features = device.features();
 
-        let skybox_format = if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_ASTC) {
-            log::info!("Using astc");
+        let format = if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_ASTC) {
             wgpu::TextureFormat::Astc {
                 block: AstcBlock::B4x4,
                 channel: AstcChannel::UnormSrgb,
             }
         } else if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_ETC2) {
-            log::info!("Using etc2");
             wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb
         } else if device_features.contains(wgpu::Features::TEXTURE_COMPRESSION_BC) {
-            log::info!("Using bc7");
             wgpu::TextureFormat::Bc7RgbaUnormSrgb
         } else {
-            log::info!("Using rgba8");
             wgpu::TextureFormat::Rgba8UnormSrgb
         };
 
-        let filename = match skybox_format {
+        let filename_prefix = match format {
             wgpu::TextureFormat::Astc {
                 block: AstcBlock::B4x4,
                 channel: AstcChannel::UnormSrgb,
-            } => "astc.ktx2",
-            wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb => "etc2.ktx2",
-            wgpu::TextureFormat::Bc7RgbaUnormSrgb => "bc7.ktx2",
-            wgpu::TextureFormat::Rgba8UnormSrgb => "rgba8.ktx2",
+            } => "astc",
+            wgpu::TextureFormat::Etc2Rgb8A1UnormSrgb => "etc2",
+            wgpu::TextureFormat::Bc7RgbaUnormSrgb => "bc7",
+            wgpu::TextureFormat::Rgba8UnormSrgb => "rgba8",
             _ => unreachable!(),
         };
-
-        let bytes = assets::load_binary(filename).await.unwrap();
+        
+        let filepath = format!("{dir}/{filename_prefix}.ktx2");
+        log::error!("Loading skybox: {filepath}");
+        let bytes = assets::load_binary(filepath.as_str()).await.unwrap();
 
         let reader = ktx2::Reader::new(bytes).unwrap();
         let header = reader.header();
@@ -185,7 +184,7 @@ impl Texture {
 
         log::debug!(
             "Copying {:?} skybox images of size {}, {}, 6 with {} mips to gpu",
-            skybox_format,
+            format,
             header.pixel_width,
             header.pixel_height,
             max_mips,
@@ -203,7 +202,7 @@ impl Texture {
                 mip_level_count: header.level_count,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format: skybox_format,
+                format,
                 usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
                 label: None,
                 view_formats: &[],
@@ -235,5 +234,121 @@ impl Texture {
             view,
             sampler,
         }
+    }
+
+    pub async fn load_cubemap_from_pngs(dir: &str, device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+        // Names of cube faces to load in order
+        let faces = ["px", "nx", "py", "ny", "pz", "nz"]; 
+        let images = {
+            let mut imgs: Vec<RgbaImage> = Vec::new();
+            for face in faces {
+                let filepath = format!("{dir}/{face}.png");
+                let bytes = assets::load_binary(filepath.as_str()).await.unwrap();
+                let image = image::load_from_memory(&bytes).unwrap().to_rgba8();   
+                imgs.push(image);         
+            }
+            imgs
+        };
+        
+        let width = images[0].width();
+        let height = images[0].height();
+
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 6,
+        };
+
+        let format = wgpu::TextureFormat::Rgba8UnormSrgb;
+
+        log::debug!(
+            "Copying {:?} skybox images of size {}, {}, 6 with no mips to gpu",
+            format,
+            width,
+            height
+        );
+
+        let texture = Self::create_texture_with_image_array(
+            device,
+            queue,
+            &wgpu::TextureDescriptor {
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                label: None,
+                view_formats: &[],
+            },
+            images
+        );
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor {
+            dimension: Some(wgpu::TextureViewDimension::Cube),
+            ..wgpu::TextureViewDescriptor::default()
+        });
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        Self {
+            texture,
+            view,
+            sampler,
+        }
+    }
+
+    fn create_texture_with_image_array(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        desc: &wgpu::TextureDescriptor<'_>,
+        images: Vec<RgbaImage>,
+    ) -> wgpu::Texture {
+        // Implicitly add the COPY_DST usage
+        let mut desc = desc.to_owned();
+        desc.usage |= wgpu::TextureUsages::COPY_DST;
+        let texture = device.create_texture(&desc);
+
+        for layer in 0..desc.array_layer_count() {
+            let image = &images[layer as usize];
+            let width = image.width();
+            let height = image.height();
+
+            let size = wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            };
+            queue.write_texture(
+                wgpu::ImageCopyTexture {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: 0,
+                        y: 0,
+                        z: layer,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &image,
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    // Assuming we have an RGBA image with 1 byte per channel
+                    // TODO: Can we make this RGB to save some memory?
+                    bytes_per_row: Some(image.width() * 4),
+                    rows_per_image: Some(image.height()),
+                },
+                size,
+            );
+        }
+
+        texture
     }
 }

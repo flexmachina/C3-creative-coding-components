@@ -51,9 +51,8 @@ struct RenderState {
     #[allow(dead_code)]
     color_format: wgpu::TextureFormat,
     depth_texture: texture::Texture,
-
+    #[allow(dead_code)]
     skybox_texture: texture::Texture,
-
     phong_pass: phong::PhongPass,
     skybox_pass: skybox::SkyboxPass,
 }
@@ -194,7 +193,8 @@ async fn create_redner_state(
         webxr
     );
 
-    let skybox_texture = texture::Texture::load_cubemap(&device, &queue).await;
+    let skybox_texture = texture::Texture::load_cubemap_from_pngs("skyboxes/planet_atmosphere", &device, &queue).await;
+    //let skybox_texture = texture::Texture::load_cubemap_from_ktx2("skyboxes/lake", &device, &queue).await;
     let skybox_config = skybox::SkyboxConfig {
         texture: &skybox_texture
     };
