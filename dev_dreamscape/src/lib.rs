@@ -16,11 +16,11 @@ mod shaders;
 mod systems;
 mod texture;
 
-use crate::systems::*;
-use bevy_ecs::prelude::*;
+//use crate::systems::*;
+//use bevy_ecs::prelude::*;
 //use crate::app::App;
 use crate::app::{run_app};
-use crate::assets::Assets;
+//use crate::assets::Assets;
 
 use winit::event_loop::EventLoop;
 

@@ -2,6 +2,7 @@ use crate::assets::Assets;
 use crate::components::mesh_renderer::ShaderVariant;
 use crate::components::transform::Transform;
 use crate::components::{MeshRenderer, PhysicsBody, PhysicsBodyParams};
+use crate::components::{MeshSpec, ShaderStage};
 use crate::device::Device;
 use crate::math::Vec3;
 use crate::mesh::Mesh;
@@ -44,6 +45,12 @@ impl FloorBox {
 
         let renderer = MeshRenderer::new(mesh, ShaderVariant::Diffuse(shader), RenderTags::SCENE);
 
+
+        let meshspec = MeshSpec::new(String::from("cube.obj"),
+                                     vec![ShaderStage::Diffuse]
+                       );
+
+
         let pos = Vec3::from_element(0.0);
         let scale = Vec3::new(100.0, 0.5, 100.0);
         let transform = Transform::new(pos, scale);
@@ -59,6 +66,8 @@ impl FloorBox {
             &mut physics,
         );
 
-        commands.spawn((FloorBox, physics_body, renderer, transform));
+
+
+        commands.spawn((FloorBox, physics_body, renderer, transform, meshspec));
     }
 }

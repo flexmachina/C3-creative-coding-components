@@ -1,6 +1,7 @@
 use crate::assets::Assets;
 use crate::components::transform::Transform;
 use crate::components::{MeshRenderer, PhysicsBody, PhysicsBodyParams, Player, ShaderVariant};
+use crate::components::{MeshSpec, ShaderStage};
 use crate::device::Device;
 use crate::input::Input;
 use crate::math::Vec3;
@@ -44,7 +45,7 @@ impl FreeBox {
         device: &Device,
         physics: &mut PhysicsWorld,
         assets: &Assets,
-    ) -> (FreeBox, PhysicsBody, MeshRenderer, Transform) {
+    ) -> (FreeBox, PhysicsBody, MeshRenderer, Transform, MeshSpec) {
         /*
         let (shader, mesh) = pollster::block_on(async {
             let shader = DiffuseShader::new(
@@ -81,8 +82,12 @@ impl FreeBox {
 
         let renderer = MeshRenderer::new(mesh, ShaderVariant::Diffuse(shader), RenderTags::SCENE);
 
+        let meshspec = MeshSpec::new(String::from("cube.obj"), 
+                                     vec![ShaderStage::Diffuse]
+                       );
+
         let transform = Transform::new(pos, scale);
 
-        (FreeBox, physics_body, renderer, transform)
+        (FreeBox, physics_body, renderer, transform, meshspec)
     }
 }
