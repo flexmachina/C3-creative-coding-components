@@ -49,8 +49,8 @@ impl PostProcessor {
 
         commands.spawn((renderer, transform, pp));
 
-        // Camera for rendering the quad (and debug UI for that matter)
-        let camera = Camera::new(1.0, RenderTags::POST_PROCESS | RenderTags::DEBUG_UI, None);
+        // Camera for rendering the quad
+        let camera = Camera::new(1.0, RenderTags::POST_PROCESS , None);
         let transform = Transform::default();
         commands.spawn((RenderOrder(100), camera, transform));
     }

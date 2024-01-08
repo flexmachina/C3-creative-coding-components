@@ -1,4 +1,3 @@
-//use crate::debug_ui::DebugUI;
 use crate::device::{Device, SurfaceSize};
 use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent};
 use crate::frame_time::FrameTime;
@@ -30,17 +29,6 @@ pub struct App {
 
 pub async fn init_app(world: &mut World) {
     println!("running init_app - started");
-    /*
-    cfg_if::cfg_if! {
-        if #[cfg(target_arch = "wasm32")] {
-            std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-            console_log::init_with_level(log::Level::Warn).expect(
-                "Couldn't initialize logger");
-        } else {
-            env_logger::init();
-        }
-    }
-    */
     printlog("running init_app - created logger");
 
     let event_loop = EventLoop::new();
@@ -53,15 +41,6 @@ pub async fn init_app(world: &mut World) {
         .unwrap();
  
     printlog("running init_app - created window");
-
-    /*
-    let event_loop = world.non_send_resource::<EventLoop<()>>();
-    let window = WindowBuilder::new()
-        .with_title("Demo")
-        .with_inner_size(SurfaceSize::new(1900, 1200))
-        .build(&event_loop)
-        .unwrap();
-    */
 
     #[cfg(target_arch = "wasm32")]
     {
@@ -103,7 +82,6 @@ pub async fn init_app(world: &mut World) {
     world.init_resource::<Events<MouseEvent>>();
 
     world.insert_non_send_resource(event_loop);
-    //world.insert_non_send_resource(DebugUI::new(&device, &window));
     world.insert_non_send_resource(window);
 
     world.insert_resource(AppState {
@@ -134,10 +112,7 @@ pub async fn run_app() {
 
     printlog("running run_app - created world");
     init_app(&mut world).await;
-    //Schedule::default().add_system(init_app).run(&mut world);
     printlog("running run_app - run init_app");
-    //Schedule::default().add_system(Assets::load).run(&mut world);
-    //printlog("running run_app - loaded assets");
 
 
     let spawn_scene_schedule = new_spawn_scene_schedule();

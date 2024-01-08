@@ -1,5 +1,4 @@
 use crate::components::{Camera, MeshRenderer, RenderOrder, Transform};
-//use crate::debug_ui::DebugUI;
 use crate::device::Device;
 use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
@@ -10,7 +9,6 @@ fn render_pass(
     device: &Device,
     bundles: &[RenderBundle],
     target: Option<&RenderTarget>,
-    //debug_ui: Option<&mut DebugUI>,
 ) {
     let surface_tex = target.is_none().then(|| {
         device
@@ -59,7 +57,6 @@ fn render_pass(
             });
 
             pass.execute_bundles(bundles.iter());
-            //if let Some(ui) = debug_ui { ui.render(device, &mut pass) }
         }
 
         encoder.finish()
@@ -110,7 +107,6 @@ pub fn render(
     cameras: Query<(&Camera, &Transform, Option<&RenderOrder>)>,
     mut renderers: Query<(&mut MeshRenderer, &Transform, Option<&RenderOrder>)>,
     device: Res<Device>,
-    //mut debug_ui: NonSendMut<DebugUI>,
 ) {
     let mut cameras = cameras.into_iter().collect::<Vec<_>>();
     cameras.sort_by_key(|(.., order)| order.map_or(0, |o| o.0));
@@ -134,9 +130,7 @@ pub fn render(
         render_pass(
             &device,
             &bundles,
-            camera.0.target().as_ref(),
-            //camera.0.should_render(
-            //    RenderTags::DEBUG_UI).then(|| debug_ui.as_mut())
+            camera.0.target().as_ref()
         );
     }
 }
