@@ -1,5 +1,6 @@
 mod assets;
 mod camera;
+mod camera_controller;
 mod instance;
 mod light;
 mod model;
@@ -31,6 +32,7 @@ use winit::{
 #[cfg(target_arch = "wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
+use camera_controller::CameraController;
 use instance::Instance;
 use node::Node;
 use pass::Pass;
@@ -106,7 +108,7 @@ impl App {
 pub struct State {
     render_state: RenderState,
     window_state: WindowState,
-    camera_controller: camera::CameraController,
+    camera_controller: CameraController,
     scene: Scene,
 }
 
@@ -306,7 +308,7 @@ impl State {
 
         let render_state = create_redner_state(device, queue, surface_format, size.width, size.height, webxr).await;
         let window_state = WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false};
-        let camera_controller = camera::CameraController::new(4.0, 0.4);
+        let camera_controller = CameraController::new(4.0, 0.4);
         Self {
             render_state,
             window_state,
