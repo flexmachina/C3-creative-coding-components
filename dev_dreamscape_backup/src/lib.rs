@@ -9,7 +9,9 @@ mod logging;
 mod math;
 mod mesh;
 mod physics_world;
+mod render_tags;
 mod render_target;
+mod shaders;
 mod systems;
 mod texture;
 

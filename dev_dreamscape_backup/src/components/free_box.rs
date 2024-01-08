@@ -1,10 +1,14 @@
 use crate::assets::Assets;
 use crate::components::transform::Transform;
-use crate::components::{PhysicsBody, PhysicsBodyParams, Player};
+use crate::components::{MeshRenderer, PhysicsBody, PhysicsBodyParams, Player, ShaderVariant};
 use crate::components::{MeshSpec, ShaderStage};
+use crate::device::Device;
 use crate::input::Input;
 use crate::math::Vec3;
+use crate::mesh::Mesh;
 use crate::physics_world::PhysicsWorld;
+use crate::render_tags::RenderTags;
+use crate::shaders::{DiffuseShader, DiffuseShaderParams};
 use bevy_ecs::prelude::*;
 
 #[derive(Component)]
@@ -13,16 +17,18 @@ pub struct FreeBox;
 impl FreeBox {
     pub fn spawn(
         mut commands: Commands,
+        device: Res<Device>,
         mut physics: ResMut<PhysicsWorld>,
         assets: Res<Assets>,
     ) {
         let pos = Vec3::y_axis().xyz() * 10.0;
-        commands.spawn(Self::new_components(pos, &mut physics, &assets));
+        commands.spawn(Self::new_components(pos, &device, &mut physics, &assets));
     }
 
     pub fn spawn_by_player(
         player: Query<&Transform, With<Player>>,
         mut commands: Commands,
+        device: Res<Device>,
         mut physics: ResMut<PhysicsWorld>,
         input: Res<Input>,
         assets: Res<Assets>,
@@ -30,16 +36,39 @@ impl FreeBox {
         if input.space_just_pressed {
             let player_transform = player.single();
             let pos = player_transform.position() + player_transform.forward().xyz() * 5.0;
-            commands.spawn(Self::new_components(pos, &mut physics, &assets));
+            commands.spawn(Self::new_components(pos, &device, &mut physics, &assets));
         }
     }
 
     fn new_components(
         pos: Vec3,
+        device: &Device,
         physics: &mut PhysicsWorld,
         assets: &Assets,
-    ) -> (FreeBox, PhysicsBody, Transform, MeshSpec) {
+    ) -> (FreeBox, PhysicsBody, MeshRenderer, Transform, MeshSpec) {
+        /*
+        let (shader, mesh) = pollster::block_on(async {
+            let shader = DiffuseShader::new(
+                device,
+                DiffuseShaderParams {
+                    texture: &assets.stone_tex,
+                },
+            )
+            .await;
+            let mesh = Mesh::from_file("cube.obj", device).await;
+            (shader, mesh)
+        });
+        */
+        let shader = DiffuseShader::new(
+            device,
+            DiffuseShaderParams {
+                texture: &assets.stone_tex,
+            },
+        );
+        let mesh = Mesh::from_string(assets.cube_mesh_string.clone(), device);
+
         let scale = Vec3::from_element(1.0);
+
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {
                 pos,
@@ -50,10 +79,15 @@ impl FreeBox {
             },
             physics,
         );
+
+        let renderer = MeshRenderer::new(mesh, ShaderVariant::Diffuse(shader), RenderTags::SCENE);
+
         let meshspec = MeshSpec::new(String::from("cube.obj"), 
                                      vec![ShaderStage::Diffuse]
                        );
+
         let transform = Transform::new(pos, scale);
-        (FreeBox, physics_body, transform, meshspec)
+
+        (FreeBox, physics_body, renderer, transform, meshspec)
     }
 }

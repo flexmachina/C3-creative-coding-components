@@ -10,11 +10,13 @@ pub struct Camera {
     zfar: f32,
     fov: f32,
     proj_matrix: Mat4,
+    // Tags to render via this camera
+    render_tags: u32,
     target: Option<RenderTarget>,
 }
 
 impl Camera {
-    pub fn new(aspect: f32, target: Option<RenderTarget>) -> Self {
+    pub fn new(aspect: f32, render_tags: u32, target: Option<RenderTarget>) -> Self {
         let znear = 0.1;
         let zfar = 100.0;
         let fov = 45.0;
@@ -26,6 +28,7 @@ impl Camera {
             zfar,
             fov,
             proj_matrix,
+            render_tags,
             target,
         }
     }
@@ -36,6 +39,10 @@ impl Camera {
 
     pub fn target_mut(&mut self) -> Option<&mut RenderTarget> {
         self.target.as_mut()
+    }
+
+    pub fn should_render(&self, tags: u32) -> bool {
+        self.render_tags & tags == tags
     }
 
     pub fn proj_matrix(&self) -> Mat4 {

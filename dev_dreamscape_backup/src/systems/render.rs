@@ -1,8 +1,9 @@
-use crate::components::{Camera, RenderOrder, Transform};
+use crate::components::{Camera, MeshRenderer, RenderOrder, Transform};
 use crate::device::Device;
 use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use wgpu::RenderBundle;
+use crate::render_tags::RenderTags;
 
 fn render_pass(
     device: &Device,
@@ -84,14 +85,52 @@ fn new_bundle_encoder<'a>(device: &'a Device, target: Option<&RenderTarget>) -> 
     })
 }
 
+fn build_render_bundles<'a>(
+    renderers: &mut [(&'a mut MeshRenderer, &'a Transform)],
+    camera: (&Camera, &Transform),
+    device: &Device,
+) -> Vec<RenderBundle> {
+    // Couldn't make it work with a single bundler encoder due to lifetimes
+    renderers
+        .iter_mut()
+        .filter(|(r, _)| camera.0.should_render(r.tags()))
+        .map(|(ref mut r, tr)| {
+            let mut encoder = new_bundle_encoder(device, camera.0.target().as_ref());
+            // TODO Create render bundle inside the function?
+            r.render(device, camera, tr, &mut encoder);
+            encoder.finish(&wgpu::RenderBundleDescriptor { label: None })
+        })
+        .collect::<Vec<_>>()
+}
 
 pub fn render(
     cameras: Query<(&Camera, &Transform, Option<&RenderOrder>)>,
+    mut renderers: Query<(&mut MeshRenderer, &Transform, Option<&RenderOrder>)>,
     device: Res<Device>,
 ) {
-    /*
     let mut cameras = cameras.into_iter().collect::<Vec<_>>();
     cameras.sort_by_key(|(.., order)| order.map_or(0, |o| o.0));
     let cameras = cameras.iter().map(|(c, t, ..)| (*c, *t));
-    */
+
+
+    let mut renderers = renderers
+        .iter_mut()
+        .map(|(r, t, o)| (r.into_inner(), t, o))
+        .collect::<Vec<_>>();
+    renderers.sort_by_key(|(.., order)| order.map_or(0, |o| o.0));
+    let mut renderers = renderers
+        .into_iter()
+        .map(|(r, t, ..)| (r, t))
+        .collect::<Vec<_>>();
+
+    println!("---");
+    for camera in cameras {
+        println!("Have a camera!");
+        let bundles = build_render_bundles(&mut renderers, camera, &device);
+        render_pass(
+            &device,
+            &bundles,
+            camera.0.target().as_ref()
+        );
+    }
 }

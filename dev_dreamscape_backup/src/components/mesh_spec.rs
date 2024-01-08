@@ -6,6 +6,7 @@ pub enum ShaderStage {
     Color(ColorShader),
     */
     Diffuse,
+    PostProcess,
     Skybox,
 }
 

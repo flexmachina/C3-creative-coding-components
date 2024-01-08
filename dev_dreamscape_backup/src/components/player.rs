@@ -7,6 +7,7 @@ use crate::events::WindowResizeEvent;
 use crate::input::Input;
 use crate::math::Vec3;
 use crate::physics_world::PhysicsWorld;
+use crate::render_tags::RenderTags;
 use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
@@ -33,6 +34,7 @@ impl Player {
         let rt = RenderTarget::new(&device, None);
         let camera = Camera::new(
             device.surface_size().width as f32 / device.surface_size().height as f32,
+            RenderTags::SCENE,
             Some(rt),
         );
         let mut transform = Transform::from_pos(pos);
