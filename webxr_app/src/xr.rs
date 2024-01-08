@@ -2,6 +2,7 @@
 
 #[allow(unused_imports)]
 use log::{debug,error,info};
+use nalgebra::{Matrix4, Point3, Quaternion, UnitQuaternion};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -18,16 +19,16 @@ fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFra
     session.request_animation_frame(f.as_ref().unchecked_ref())
 }
 
-// This is straightforward because:
+// We need to take care here because:
 // * WebGL matrices are stored as an array in column-major order
-// * cgmath::Matrix4::new args are also in column-major order
+// * nalgebra::Matrix4::new args are in row-major order
 //https://developer.mozilla.org/en-US/docs/Web/API/XRRigidTransform/matrix
-fn to_mat(v: &Vec<f32>) -> cgmath::Matrix4<f32> {
-    cgmath::Matrix4::new(
-        v[0],  v[1],  v[2],  v[3],
-        v[4],  v[5],  v[6],  v[7],
-        v[8],  v[9],  v[10], v[11],
-        v[12], v[13], v[14], v[15],
+fn to_mat(v: &Vec<f32>) -> Matrix4<f32> {
+    Matrix4::new(
+        v[0],  v[4],  v[8],  v[12],
+        v[1],  v[5],  v[9],  v[13],
+        v[2],  v[6],  v[10], v[14],
+        v[3],  v[7],  v[11], v[15],
     )
 }
 
@@ -177,10 +178,10 @@ impl XrApp {
 
                 // Get decomposed position and orientation as they are easier to operate on than the view matrix
                 let pos = view.transform().position();
-                let position = cgmath::Point3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
+                let position = Point3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
                 let r = view.transform().orientation();
-                let rotation = cgmath::Quaternion::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
-
+                let rotation = Quaternion::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
+                let rotation = UnitQuaternion::new_normalize(rotation);
                 state.scene.camera.xr_camera = XrCamera{position, rotation, projection: to_mat(&view.projection_matrix())};
 
                 let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);

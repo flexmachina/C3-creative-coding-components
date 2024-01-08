@@ -1,17 +1,19 @@
+use nalgebra::{Matrix3, Matrix4, UnitQuaternion, Vector3};
+
 use crate::model;
 
 pub struct Instance {
-    pub position: cgmath::Vector3<f32>,
-    pub rotation: cgmath::Quaternion<f32>,
+    pub position: Vector3<f32>,
+    pub rotation: UnitQuaternion<f32>,
 }
 
 impl Instance {
     pub fn to_raw(&self) -> InstanceRaw {
         InstanceRaw {
-            model: (cgmath::Matrix4::from_translation(self.position)
-                * cgmath::Matrix4::from(self.rotation))
+            model: (Matrix4::new_translation(&self.position)
+                * Matrix4::from(self.rotation))
             .into(),
-            normal: cgmath::Matrix3::from(self.rotation).into(),
+            normal: Matrix3::from(self.rotation.to_rotation_matrix()).into(),
         }
     }
 }
