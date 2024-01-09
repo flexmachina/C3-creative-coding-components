@@ -1,8 +1,12 @@
-use crate::components::{Camera, RenderOrder, Transform};
+use crate::components::{Camera, RenderOrder, Transform, Player, MeshSpec, SkyboxSpec};
+use crate::mesh::Mesh;
+use crate::assets::Assets;
+
 use crate::device::Device;
 use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use wgpu::RenderBundle;
+
 
 fn render_pass(
     device: &Device,
@@ -85,13 +89,92 @@ fn new_bundle_encoder<'a>(device: &'a Device, target: Option<&RenderTarget>) -> 
 }
 
 
-pub fn render(
-    cameras: Query<(&Camera, &Transform, Option<&RenderOrder>)>,
+
+pub fn prepare_render_pipelines(
     device: Res<Device>,
+    assets: Res<Assets>,
+    mut commands: Commands,
+    player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
 ) {
-    /*
-    let mut cameras = cameras.into_iter().collect::<Vec<_>>();
-    cameras.sort_by_key(|(.., order)| order.map_or(0, |o| o.0));
-    let cameras = cameras.iter().map(|(c, t, ..)| (*c, *t));
+
+    /*    
+    //Leave as single pipeline to render skybox
+    let skybox_shader = SkyboxShader::new(&device,SkyboxShaderParams {texture: &assets.skybox_tex,});
+    let skybox_mesh = Mesh::quad(&device);
+    let skybox_renderer = MeshRenderer::new(skybox_mesh, ShaderVariant::Skybox(skybox_shader), RenderTags::SCENE);
+    let skybox_transform = Transform::default();
+
+
+    //Make a pipeline for rendering all other mesh objects?
+    let diffuse_shader = DiffuseShader::new(&device,DiffuseShaderParams {texture: &assets.stone_tex,});
+    let diffuse_mesh = Mesh::from_string(assets.cube_mesh_string.clone(), &device);
+    let diffuse_renderer = MeshRenderer::new(diffuse_mesh, ShaderVariant::Diffuse(diffuse_shader), RenderTags::SCENE);
     */
 }
+
+
+
+
+pub fn render(
+    device: Res<Device>,
+    player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
+    mut meshes_qry: Query<(&MeshSpec, &Transform, Option<&RenderOrder>)>,
+    mut skyboxes_qry: Query<(&SkyboxSpec, &Transform, Option<&RenderOrder>)>,
+) {
+
+    let player_cam = player_cam_qry.single();
+    let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
+
+    let (skybox_spec, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
+   
+
+    /*
+    let mut encoder = new_bundle_encoder(device, camera.0.target().as_ref());    
+    
+    let player_cam = player_cam_qry.single_mut();
+
+    let mut meshes_to_render = renderers
+        .iter_mut()
+        .map(|(r, t, o)| (r.into_inner(), t, o))
+        .collect::<Vec<_>>();
+    */
+
+
+
+    /*
+     * Update the skybox based on 
+     *
+     */
+
+    /*
+     * For each mesh key in assets, make a pipeline to render all instances of the mesh
+     *
+     */
+
+
+    /*
+
+
+
+
+    match self.shader {
+        ShaderVariant::Diffuse(ref mut diffuse) => {
+            diffuse.update_uniforms(device, camera, transform);
+            diffuse.apply(encoder);
+        }
+        ShaderVariant::Skybox(ref mut skybox) => {
+            skybox.update_uniforms(device, camera);
+            skybox.apply(encoder);
+        }
+        ShaderVariant::PostProcess(ref mut pp) => {
+            pp.apply(encoder);
+        }
+    }
+    encoder.draw_mesh(&self.mesh);
+
+    */
+
+}
+
+
+

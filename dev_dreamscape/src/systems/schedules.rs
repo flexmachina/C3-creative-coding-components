@@ -8,7 +8,7 @@ use crate::systems::{
         update_frame_time,
         update_physics,
         render,
-        global_render,
+        prepare_render_pipelines,
 };
 use crate::assets::Assets;
 use crate::components::{
@@ -30,6 +30,7 @@ pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
     let mut schedule = Schedule::default();
     schedule
         //.add_system(Assets::load.run_if(run_once()))
+        .add_system(prepare_render_pipelines.run_if(run_once()))
         .add_system(Skybox::spawn.run_if(run_once()))
         .add_system(FreeBox::spawn.run_if(run_once()))
         .add_system(FloorBox::spawn.run_if(run_once()))
@@ -85,15 +86,6 @@ pub fn new_render_schedule() -> (Schedule, RenderLabel) {
 }
 
 
-#[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct GlobalrenderLabel;
-
-pub fn new_global_render_schedule() -> (Schedule, GlobalrenderLabel) {
-    let mut schedule = Schedule::default();
-    schedule
-        .add_system(global_render);
-    (schedule, GlobalrenderLabel)
-}
 
 
 

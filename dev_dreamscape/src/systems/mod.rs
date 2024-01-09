@@ -1,5 +1,4 @@
 mod render;
-mod global_render;
 mod update_input_state;
 //mod grab_cursor;
 mod schedules;
@@ -11,12 +10,11 @@ use crate::app::AppState;
 use bevy_ecs::prelude::*;
 use winit::event::{VirtualKeyCode};
 
-pub use render::render;
-pub use global_render::global_render;
+pub use render::{render,prepare_render_pipelines};
 pub use update_input_state::update_input_state;
 //pub use grab_cursor::grab_cursor;
 pub use schedules::{new_spawn_scene_schedule,new_preupdate_schedule,
-                    new_update_schedule,new_render_schedule,new_global_render_schedule};
+                    new_update_schedule,new_render_schedule};
 use crate::frame_time::FrameTime;
 
 pub fn resize_device(mut device: ResMut<Device>, mut events: EventReader<WindowResizeEvent>) {
