@@ -7,7 +7,6 @@ use crate::events::WindowResizeEvent;
 use crate::input::Input;
 use crate::math::Vec3;
 use crate::physics_world::PhysicsWorld;
-use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
 use crate::frame_time::FrameTime;
@@ -30,10 +29,8 @@ impl Player {
     ) {
         let pos = Vec3::new(7.0, 7.0, 7.0);
 
-        let rt = RenderTarget::new(&device, None);
         let camera = Camera::new(
-            device.surface_size().width as f32 / device.surface_size().height as f32,
-            Some(rt),
+            device.surface_size().width as f32 / device.surface_size().height as f32
         );
         let mut transform = Transform::from_pos(pos);
         transform.look_at(Vec3::from_element(0.0));
@@ -190,10 +187,13 @@ fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
 
 fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, device: &Device) {
     camera.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);
+    //TODO handle camera resize!
+    /*
     if let Some(target) = camera.target_mut() {
         target.resize(
             (new_surface_size.width, new_surface_size.height),
             device,
         )
     }
+    */
 }

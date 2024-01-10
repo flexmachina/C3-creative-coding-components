@@ -3,30 +3,23 @@ use crate::mesh::Mesh;
 use crate::assets::Assets;
 
 use crate::device::Device;
-use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use wgpu::RenderBundle;
 
-
+/*
 fn render_pass(
     device: &Device,
     bundles: &[RenderBundle],
-    target: Option<&RenderTarget>,
 ) {
-    let surface_tex = target.is_none().then(|| {
-        device
+    let surface_tex = device
             .surface()
             .get_current_texture()
-            .expect("Missing surface texture")
-    });
+            .expect("Missing surface texture");
     let surface_tex_view = surface_tex
         .as_ref()
         .map(|t| t.texture.create_view(&wgpu::TextureViewDescriptor::default()));
 
-    let color_tex_view = target
-        .map(|t| t.color_tex().view())
-        .or(surface_tex_view.as_ref())
-        .unwrap();
+    let color_tex_view = surface_tex_view.as_ref().unwrap();
     let color_attachment = Some(wgpu::RenderPassColorAttachment {
         view: color_tex_view,
         resolve_target: None,
@@ -36,9 +29,7 @@ fn render_pass(
         },
     });
 
-    let depth_tex_view = target
-        .map(|t| t.depth_tex().view())
-        .unwrap_or(device.depth_tex().view());
+    let depth_tex_view = device.depth_tex().view();
     let depth_attachment = Some(wgpu::RenderPassDepthStencilAttachment {
         view: depth_tex_view,
         depth_ops: Some(wgpu::Operations {
@@ -69,11 +60,9 @@ fn render_pass(
     if let Some(t) = surface_tex { t.present() }
 }
 
-fn new_bundle_encoder<'a>(device: &'a Device, target: Option<&RenderTarget>) -> wgpu::RenderBundleEncoder<'a> {
-    let color_format = target
-        .map_or(device.surface_texture_format(), |t| t.color_tex().format());
-    let depth_format = target
-        .map_or(device.depth_texture_format(), |t| t.depth_tex().format());
+fn new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a> {
+    let color_format = device.surface_texture_format();
+    let depth_format = device.depth_texture_format();
 
     device.create_render_bundle_encoder(&wgpu::RenderBundleEncoderDescriptor {
         label: None,
@@ -87,7 +76,7 @@ fn new_bundle_encoder<'a>(device: &'a Device, target: Option<&RenderTarget>) -> 
         }),
     })
 }
-
+*/
 
 
 pub fn prepare_render_pipelines(
@@ -123,7 +112,7 @@ pub fn render(
 ) {
 
     let player_cam = player_cam_qry.single();
-    let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
+    //let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
 
     let (skybox_spec, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
    

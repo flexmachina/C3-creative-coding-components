@@ -1,5 +1,4 @@
 use crate::math::Mat4;
-use crate::render_target::RenderTarget;
 use bevy_ecs::prelude::*;
 use rapier3d::na;
 
@@ -10,11 +9,10 @@ pub struct Camera {
     zfar: f32,
     fov: f32,
     proj_matrix: Mat4,
-    target: Option<RenderTarget>,
 }
 
 impl Camera {
-    pub fn new(aspect: f32, target: Option<RenderTarget>) -> Self {
+    pub fn new(aspect: f32) -> Self {
         let znear = 0.1;
         let zfar = 100.0;
         let fov = 45.0;
@@ -26,16 +24,7 @@ impl Camera {
             zfar,
             fov,
             proj_matrix,
-            target,
         }
-    }
-
-    pub fn target(&self) -> &Option<RenderTarget> {
-        &self.target
-    }
-
-    pub fn target_mut(&mut self) -> Option<&mut RenderTarget> {
-        self.target.as_mut()
     }
 
     pub fn proj_matrix(&self) -> Mat4 {

@@ -80,7 +80,10 @@ impl Device {
         };
         surface.configure(&device, &surface_config);
 
-        let depth_tex = Texture::new_depth(&device, Self::DEPTH_TEX_FORMAT, surface_size.into());
+        //let depth_tex = Texture::new_depth(&device, Self::DEPTH_TEX_FORMAT, surface_size.into());
+        let depth_tex = Texture::create_depth_texture(&device, 
+                            surface_size.width, surface_size.height, "depth_texture");
+
 
         Self {
             surface_config,
@@ -96,8 +99,9 @@ impl Device {
             self.surface_config.width = new_size.width;
             self.surface_config.height = new_size.height;
             self.surface.configure(&self.device, &self.surface_config);
-            self.depth_tex =
-                Texture::new_depth(&self.device, Self::DEPTH_TEX_FORMAT, new_size.into());
+            self.depth_tex = Texture::create_depth_texture(&self.device, 
+                                    new_size.width, new_size.height, "depth_texture");
+                //Texture::new_depth(&self.device, Self::DEPTH_TEX_FORMAT, new_size.into());
         }
     }
 
