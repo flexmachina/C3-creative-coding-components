@@ -3,6 +3,7 @@ mod camera;
 mod camera_controller;
 mod instance;
 mod light;
+mod maths;
 mod model;
 mod node;
 mod pass;
@@ -19,7 +20,6 @@ mod xr;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use nalgebra::{Vector3, UnitQuaternion, UnitVector3};
 #[allow(unused_imports)]
 use log::{debug,error,info};
 #[cfg(target_arch = "wasm32")]
@@ -34,6 +34,7 @@ use winit::platform::web::EventLoopExtWebSys;
 
 use camera_controller::CameraController;
 use instance::Instance;
+use maths::{Vec3, UnitQuat, UnitVec3};
 use node::Node;
 use pass::Pass;
 use phong::PhongConfig;
@@ -139,16 +140,16 @@ async fn create_scene(
                 let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
                 let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
 
-                let position = Vector3::new(x, 0.0, z);
+                let position = Vec3::new(x, 0.0, z);
 
-                let rotation = if position == Vector3::zeros() {
-                    UnitQuaternion::from_axis_angle(
-                        &Vector3::z_axis(),
+                let rotation = if position == Vec3::zeros() {
+                    UnitQuat::from_axis_angle(
+                        &Vec3::z_axis(),
                         0.0,
                     )
                 } else {
                     let angle: f32 = 45.0;
-                    UnitQuaternion::from_axis_angle(&UnitVector3::new_normalize(position), angle.to_radians())
+                    UnitQuat::from_axis_angle(&UnitVec3::new_normalize(position), angle.to_radians())
                 };
 
                 Instance { position, rotation }
@@ -377,7 +378,7 @@ impl State {
         let deg_per_sec = 90.;
         let deg = deg_per_sec * dt.as_secs_f32();
         self.scene.light.position =
-            UnitQuaternion::from_axis_angle(&Vector3::y_axis(), deg.to_radians())
+            UnitQuat::from_axis_angle(&Vec3::y_axis(), deg.to_radians())
                 * old_position;
     }
 

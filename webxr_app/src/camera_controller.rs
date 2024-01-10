@@ -1,12 +1,12 @@
 use std::time::Duration;
 use std::f32::consts::FRAC_PI_2;
 
-use nalgebra::{clamp, Vector3};
+use nalgebra as na;
 use winit::dpi::PhysicalPosition;
 use winit::event::*;
 
 use crate::camera::Camera;
-
+use crate::maths::Vec3;
 
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
@@ -94,8 +94,8 @@ impl CameraController {
         let dt = dt.as_secs_f32();
         // Move forward/backward and left/right
         let (yaw_sin, yaw_cos) = camera.yaw.sin_cos();
-        let forward = Vector3::new(-yaw_sin, 0.0, -yaw_cos).normalize();
-        let right = Vector3::new(yaw_cos, 0.0, -yaw_sin).normalize();
+        let forward = Vec3::new(-yaw_sin, 0.0, -yaw_cos).normalize();
+        let right = Vec3::new(yaw_cos, 0.0, -yaw_sin).normalize();
         camera.position += forward * (self.amount_forward - self.amount_backward) * self.speed * dt;
         camera.position += right * (self.amount_right - self.amount_left) * self.speed * dt;
 
@@ -105,7 +105,7 @@ impl CameraController {
         // to get closer to an object you want to focus on.
         let (pitch_sin, pitch_cos) = camera.pitch.sin_cos();
         let scrollward =
-            Vector3::new(pitch_cos * yaw_sin, pitch_sin, pitch_cos * yaw_cos).normalize();
+            Vec3::new(pitch_cos * yaw_sin, pitch_sin, pitch_cos * yaw_cos).normalize();
         camera.position += scrollward * self.scroll * self.speed * self.sensitivity * dt;
         self.scroll = 0.0;
 
@@ -124,6 +124,6 @@ impl CameraController {
         self.rotate_vertical = 0.0;
 
         // Keep the camera's angle from going too high/low.
-        camera.pitch = clamp(camera.pitch, -SAFE_FRAC_PI_2, SAFE_FRAC_PI_2)
+        camera.pitch = na::clamp(camera.pitch, -SAFE_FRAC_PI_2, SAFE_FRAC_PI_2)
     }
 }

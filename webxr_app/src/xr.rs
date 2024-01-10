@@ -2,7 +2,6 @@
 
 #[allow(unused_imports)]
 use log::{debug,error,info};
-use nalgebra::{Matrix4, Point3, Quaternion, UnitQuaternion};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -11,6 +10,7 @@ use wasm_bindgen::prelude::*;
 use web_sys::*;
 
 use crate::camera::XrCamera;
+use crate::maths::{Mat4, Mat4f, Point3, Quat, UnitQuat};
 
 
 fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFrame)>) -> u32 {
@@ -22,9 +22,9 @@ fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFra
 // We need to take care here because:
 // * WebGL matrices are stored as an array in column-major order
 // * nalgebra::Matrix4::new args are in row-major order
-//https://developer.mozilla.org/en-US/docs/Web/API/XRRigidTransform/matrix
-fn to_mat(v: &Vec<f32>) -> Matrix4<f32> {
-    Matrix4::new(
+// https://developer.mozilla.org/en-US/docs/Web/API/XRRigidTransform/matrix
+fn to_mat(v: &Vec<f32>) -> Mat4f {
+    Mat4::new(
         v[0],  v[4],  v[8],  v[12],
         v[1],  v[5],  v[9],  v[13],
         v[2],  v[6],  v[10], v[14],
@@ -180,8 +180,8 @@ impl XrApp {
                 let pos = view.transform().position();
                 let position = Point3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
                 let r = view.transform().orientation();
-                let rotation = Quaternion::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
-                let rotation = UnitQuaternion::new_normalize(rotation);
+                let rotation = Quat::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
+                let rotation = UnitQuat::new_normalize(rotation);
                 state.scene.camera.xr_camera = XrCamera{position, rotation, projection: to_mat(&view.projection_matrix())};
 
                 let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);

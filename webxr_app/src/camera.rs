@@ -1,11 +1,13 @@
-use nalgebra::{Matrix4, Perspective3, Point3, Vector3, UnitQuaternion};
+use nalgebra as na;
 #[allow(unused_imports)]
 use log::error;
+
+use crate::maths::{Mat4, Mat4f, Point3, Point3f, Vec3, UnitQuat, UnitQuatf};
 
 
 #[rustfmt::skip]
 #[allow(dead_code)]
-pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::new(
+pub const OPENGL_TO_WGPU_MATRIX: Mat4f = Mat4::new(
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
     0.0, 0.0, 0.5, 0.0,
@@ -13,7 +15,7 @@ pub const OPENGL_TO_WGPU_MATRIX: Matrix4<f32> = Matrix4::new(
 );
 
 #[rustfmt::skip]
-pub const FLIPY_MATRIX: Matrix4<f32> = Matrix4::new(
+pub const FLIPY_MATRIX: Mat4f = Mat4::new(
     1.0, 0.0, 0.0, 0.0,
     0.0, -1.0, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
@@ -29,7 +31,7 @@ pub struct CameraUniform {
 
 #[derive(Debug)]
 pub struct Camera {
-    pub position: Point3<f32>,
+    pub position: Point3f,
     pub yaw: f32,
     pub pitch: f32,
     pub projection: Projection,
@@ -41,7 +43,7 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new<P: Into<Point3<f32>>>(
+    pub fn new<P: Into<Point3f>>(
         position: P,
         yaw: f32,
         pitch: f32,
@@ -54,8 +56,8 @@ impl Camera {
             projection,
             xr_camera: XrCamera { 
                 position: [0.0, 0.0, 0.0].into(),
-                rotation: UnitQuaternion::identity(),
-                projection: Matrix4::identity()
+                rotation: UnitQuat::identity(),
+                projection: Mat4::identity()
             }
         }
     }
@@ -67,7 +69,7 @@ impl Camera {
         }
     }
 
-    pub fn view_proj(&self) -> Matrix4<f32> {
+    pub fn view_proj(&self) -> Mat4f {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it seems
         // to cause a sliding effect relative to the skybox
         // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be 
@@ -76,29 +78,29 @@ impl Camera {
         self.projection.matrix() * self.calc_matrix(self.position)
     }
 
-    pub fn view_proj_skybox(&self) -> Matrix4<f32> {
+    pub fn view_proj_skybox(&self) -> Mat4f {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
         // skybox rendering.
         self.projection.matrix() * self.calc_matrix(Point3::origin())
     }
 
-    fn calc_matrix(&self, position: Point3<f32>) -> Matrix4<f32> {
+    fn calc_matrix(&self, position: Point3f) -> Mat4f {
         let (sin_pitch, cos_pitch) = self.pitch.sin_cos();
         let (sin_yaw, cos_yaw) = self.yaw.sin_cos();
-        let dir = Vector3::new(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw).normalize();
-        Matrix4::look_at_lh(
+        let dir = Vec3::new(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw).normalize();
+        Mat4::look_at_lh(
             &position,
             &(position + dir),
-            &Vector3::y_axis(),
+            &Vec3::y_axis(),
         )
     }
 }
 
 #[derive(Debug)]
 pub struct XrCamera {
-    pub position: Point3<f32>,
-    pub rotation: UnitQuaternion<f32>,
-    pub projection: Matrix4<f32>,
+    pub position: Point3f,
+    pub rotation: UnitQuatf,
+    pub projection: Mat4f,
 }
 
 impl XrCamera {
@@ -112,14 +114,14 @@ impl XrCamera {
         }
     }
 
-    pub fn view_proj_skybox(&self) -> Matrix4<f32> {
+    pub fn view_proj_skybox(&self) -> Mat4f {
         // See below for explanation of the maths
         let rot = self.rotation.conjugate();
-        let view = Matrix4::from(rot.to_rotation_matrix());
+        let view = Mat4::from(rot.to_rotation_matrix());
         FLIPY_MATRIX * self.projection * view
     }
 
-    pub fn view_proj(&self) -> Matrix4<f32> {
+    pub fn view_proj(&self) -> Mat4f {
         // Dealing with the WebXR coordinate system needs to be taken with care as there are a few complications that
         // arise from performating rendering with wgpu directly to a WebGL framebuffer.
         // The WebXR projection matrix, position and orientation memebrs of this struct need to be manipulated because in WebXR 
@@ -130,22 +132,22 @@ impl XrCamera {
         // 4. Invert the position - not sure if this is related to flipping Y, but it seems necessary
         let pos = self.position * -1.;
         let rot = self.rotation.conjugate();
-        // TODO: find better way to convert from Position3 to Vector3
-        let pos = Vector3::new(pos.x, pos.y, pos.z);
-        let view = Matrix4::from(rot.to_rotation_matrix()) * Matrix4::new_translation(&pos);
+        // TODO: find better way to convert from Position3 to Vec3f
+        let pos = Vec3::new(pos.x, pos.y, pos.z);
+        let view = Mat4::from(rot.to_rotation_matrix()) * Mat4::new_translation(&pos);
         FLIPY_MATRIX * self.projection * view
     }
 }
 
 #[derive(Debug)]
 pub struct Projection {
-    perspective: Perspective3<f32>
+    perspective: na::Perspective3<f32>
 }
 
 impl Projection {
     pub fn new(width: u32, height: u32, fovy: f32, znear: f32, zfar: f32) -> Self {
         Self {
-            perspective: Perspective3::new(width as f32 / height as f32, fovy, znear, zfar)
+            perspective: na::Perspective3::new(width as f32 / height as f32, fovy, znear, zfar)
         }
     }
 
@@ -153,7 +155,7 @@ impl Projection {
         self.perspective.set_aspect(width as f32 / height as f32);
     }
 
-    pub fn matrix(&self) -> &Matrix4<f32> {
+    pub fn matrix(&self) -> &Mat4f {
         self.perspective.as_matrix()
     }
 }
