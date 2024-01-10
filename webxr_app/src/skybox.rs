@@ -1,9 +1,9 @@
-use nalgebra::Matrix4;
 use wgpu::{util::DeviceExt, Device, Queue};
 
 use crate::{
     camera::Camera,
     light::Light,
+    maths::Mat4,
     node::Node,
     pass::Pass,
     Rect,
@@ -38,7 +38,7 @@ impl SkyboxPass {
         webxr: bool
     ) -> Self {
 
-        let uniform = Uniform{view_proj_inv: Matrix4::identity().into()};
+        let uniform = Uniform{view_proj_inv: Mat4::identity().into()};
 
         let (uniform_bind_group_layout, uniform_bind_group, uniform_buffer) =
             new_uniform_bind_group(device, bytemuck::cast_slice(&[uniform]));

@@ -1,19 +1,19 @@
-use nalgebra::{Matrix3, Matrix4, UnitQuaternion, Vector3};
+use crate::maths::{Mat3, Mat4, UnitQuatf, Vec3f};
 
 use crate::model;
 
 pub struct Instance {
-    pub position: Vector3<f32>,
-    pub rotation: UnitQuaternion<f32>,
+    pub position: Vec3f,
+    pub rotation: UnitQuatf,
 }
 
 impl Instance {
     pub fn to_raw(&self) -> InstanceRaw {
         InstanceRaw {
-            model: (Matrix4::new_translation(&self.position)
-                * Matrix4::from(self.rotation))
+            model: (Mat4::new_translation(&self.position)
+                * Mat4::from(self.rotation))
             .into(),
-            normal: Matrix3::from(self.rotation.to_rotation_matrix()).into(),
+            normal: Mat3::from(self.rotation.to_rotation_matrix()).into(),
         }
     }
 }
