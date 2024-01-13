@@ -3,6 +3,7 @@ use nalgebra as na;
 use log::error;
 
 use crate::maths::{Mat4, Mat4f, Point3, Point3f, Vec3, UnitQuat, UnitQuatf};
+use crate::transform::Transform;
 
 
 #[rustfmt::skip]
@@ -31,9 +32,7 @@ pub struct CameraUniform {
 
 #[derive(Debug)]
 pub struct Camera {
-    pub position: Point3f,
-    pub yaw: f32,
-    pub pitch: f32,
+    pub transform: Transform,
     pub projection: Projection,
 
     // Hack to avoid passing around 2 cameras
@@ -43,16 +42,12 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new<P: Into<Point3f>>(
-        position: P,
-        yaw: f32,
-        pitch: f32,
+    pub fn new(
+        transform: Transform,
         projection: Projection 
     ) -> Self {
         Self {
-            position: position.into(),
-            yaw: yaw.to_radians(),
-            pitch: pitch.to_radians(),
+            transform,
             projection,
             xr_camera: XrCamera { 
                 position: [0.0, 0.0, 0.0].into(),
@@ -64,30 +59,34 @@ impl Camera {
 
     pub fn to_uniform(&self) -> CameraUniform {
         CameraUniform {
-            view_position: self.position.to_homogeneous().into(),
+            view_position: self.transform.position().to_homogeneous().into(),
             view_proj: self.view_proj().into()
         }
     }
-
+    
+    // TODO: pass in transform as a parameter when using ECS
     pub fn view_proj(&self) -> Mat4f {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it seems
         // to cause a sliding effect relative to the skybox
         // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be 
         // halfway inside the clipping area when the camera matrix is identity.
         // OPENGL_TO_WGPU_MATRIX * 
-        self.projection.matrix() * self.calc_matrix(self.position)
+        self.projection.matrix() * self.view_matrix(self.transform.position().into())
     }
-
+    
+    // TODO: pass in transform as a parameter when using ECS
     pub fn view_proj_skybox(&self) -> Mat4f {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
         // skybox rendering.
-        self.projection.matrix() * self.calc_matrix(Point3::origin())
+        self.projection.matrix() * self.view_matrix(Point3::origin())
     }
 
-    fn calc_matrix(&self, position: Point3f) -> Mat4f {
-        let (sin_pitch, cos_pitch) = self.pitch.sin_cos();
-        let (sin_yaw, cos_yaw) = self.yaw.sin_cos();
-        let dir = Vec3::new(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw).normalize();
+    // TODO: pass in transform as a parameter when using ECS
+    fn view_matrix(&self, position: Point3f) -> Mat4f {
+        // Compute view matrix directly rather than inverting transform matrix
+        // This is potentially less expensive, but another reason is that for skybox rendering 
+        // we need the view matrix with the eye position at the origin
+        let dir = -self.transform.forward();
         Mat4::look_at_lh(
             &position,
             &(position + dir),

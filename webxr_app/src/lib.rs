@@ -11,6 +11,7 @@ mod phong;
 mod shader_utils;
 mod skybox;
 mod texture;
+mod transform;
 #[cfg(target_arch = "wasm32")]
 mod utils;
 mod wgpu_ext;
@@ -127,11 +128,13 @@ async fn create_scene(
     let projection = camera::Projection::new(
         width, height, 
         45.0, 0.1, 100.0);
+    let transform = transform::Transform::default();
+
     let camera = camera::Camera::new(
-        [0.0, 0.0, 0.0], 
-        0.0, 
-        0.0,
-        projection);
+        // TODO: add support for init with rotation
+        transform,
+        projection
+    );
 
     const SPACE_BETWEEN: f32 = 3.0;
     let instances = (0..NUM_INSTANCES_PER_ROW)
