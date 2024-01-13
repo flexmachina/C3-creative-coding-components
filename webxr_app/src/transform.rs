@@ -20,9 +20,8 @@ pub struct Transform {
 
 // TODO Parent-child relationships
 impl Transform {
-    pub fn new(pos: Vec3f, scale: Vec3f) -> Self {
+    pub fn new(pos: Vec3f, rot: UnitQuatf, scale: Vec3f) -> Self {
         let m = Mat4::identity();
-        let rot = UnitQuat::identity();
         let mut res = Self { m, rot, scale, pos };
         res.rebuild_matrix();
         res
@@ -31,7 +30,7 @@ impl Transform {
     // Getters
 
     pub fn from_pos(pos: Vec3f) -> Self {
-        Transform::new(pos, Vec3::from_element(1.0))
+        Transform::new(pos, UnitQuat::identity(), Vec3::from_element(1.0))
     }
 
     pub fn matrix(&self) -> Mat4f {
@@ -109,6 +108,6 @@ impl Transform {
 
 impl Default for Transform {
     fn default() -> Self {
-        Transform::new(Vec3::new(0.0, 0.0, 0.0), Vec3::from_element(1.0))
+        Transform::new(Vec3::new(0.0, 0.0, 0.0), UnitQuat::identity(), Vec3::from_element(1.0))
     }
 }
