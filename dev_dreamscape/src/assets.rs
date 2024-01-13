@@ -3,12 +3,18 @@ use std::path::PathBuf;
 use bevy_ecs::prelude::{Commands, Res, Resource};
 use cfg_if::cfg_if;
 
+
+use rapier3d::na::{Vector2, Vector3};
+use wgpu::util::DeviceExt;
+use std::io::{BufReader, Cursor};
+
 use crate::device::Device;
-use crate::texture::Texture;
-use crate::mesh::Mesh;
+use crate::{model, texture};
 use std::collections::HashMap;
 
 use crate::logging::{printlog};
+
+
 
 #[cfg(target_arch = "wasm32")]
 fn format_url(file_name: &str) -> reqwest::Url {
@@ -65,6 +71,168 @@ pub async fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
 
 
 
+pub async fn load_texture(
+    file_name: &str,
+    is_normal_map: bool,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) -> anyhow::Result<texture::Texture> {
+    let data = load_binary(file_name).await?;
+    texture::Texture::from_bytes(device, queue, &data, file_name, is_normal_map)
+}
+
+pub async fn load_model(
+    file_name: &str,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) -> anyhow::Result<model::Model> {
+    let obj_text = load_string(file_name).await?;
+    let obj_cursor = Cursor::new(obj_text);
+    let mut obj_reader = BufReader::new(obj_cursor);
+
+    let (models, obj_materials) = tobj::load_obj_buf_async(
+        &mut obj_reader,
+        &tobj::LoadOptions {
+            triangulate: true,
+            single_index: true,
+            ..Default::default()
+        },
+        |p| async move {
+            let mat_text = load_string(&p).await.unwrap();
+            tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
+        },
+    )
+    .await?;
+
+    let mut materials = Vec::new();
+    for m in obj_materials? {
+        let diffuse_texture = load_texture(&m.diffuse_texture, false, device, queue).await?;
+        let normal_texture = load_texture(&m.normal_texture, true, device, queue).await?;
+
+        materials.push(model::Material::new(
+            &m.name,
+            diffuse_texture,
+            normal_texture
+        ));
+    }
+
+    let meshes = models
+        .into_iter()
+        .map(|m| {
+            let mut vertices = (0..m.mesh.positions.len() / 3)
+                .map(|i| model::ModelVertex {
+                    position: [
+                        m.mesh.positions[i * 3],
+                        m.mesh.positions[i * 3 + 1],
+                        m.mesh.positions[i * 3 + 2],
+                    ],
+                    tex_coords: [m.mesh.texcoords[i * 2], m.mesh.texcoords[i * 2 + 1]],
+                    normal: [
+                        m.mesh.normals[i * 3],
+                        m.mesh.normals[i * 3 + 1],
+                        m.mesh.normals[i * 3 + 2],
+                    ],
+                    // We'll calculate these later
+                    tangent: [0.0; 3],
+                    bitangent: [0.0; 3],
+                })
+                .collect::<Vec<_>>();
+
+            let indices = &m.mesh.indices;
+            let mut triangles_included = vec![0; vertices.len()];
+
+            // Calculate tangents and bitangets. We're going to
+            // use the triangles, so we need to loop through the
+            // indices in chunks of 3
+            for c in indices.chunks(3) {
+                let v0 = vertices[c[0] as usize];
+                let v1 = vertices[c[1] as usize];
+                let v2 = vertices[c[2] as usize];
+
+                let pos0: Vector3<_> = v0.position.into();
+                let pos1: Vector3<_> = v1.position.into();
+                let pos2: Vector3<_> = v2.position.into();
+
+                let uv0: Vector2<_> = v0.tex_coords.into();
+                let uv1: Vector2<_> = v1.tex_coords.into();
+                let uv2: Vector2<_> = v2.tex_coords.into();
+
+                // Calculate the edges of the triangle
+                let delta_pos1 = pos1 - pos0;
+                let delta_pos2 = pos2 - pos0;
+
+                // This will give us a direction to calculate the
+                // tangent and bitangent
+                let delta_uv1 = uv1 - uv0;
+                let delta_uv2 = uv2 - uv0;
+
+                // Solving the following system of equations will
+                // give us the tangent and bitangent.
+                //     delta_pos1 = delta_uv1.x * T + delta_u.y * B
+                //     delta_pos2 = delta_uv2.x * T + delta_uv2.y * B
+                // Luckily, the place I found this equation provided
+                // the solution!
+                let r = 1.0 / (delta_uv1.x * delta_uv2.y - delta_uv1.y * delta_uv2.x);
+                let tangent = (delta_pos1 * delta_uv2.y - delta_pos2 * delta_uv1.y) * r;
+                // We flip the bitangent to enable right-handed normal
+                // maps with wgpu texture coordinate system
+                let bitangent = (delta_pos2 * delta_uv1.x - delta_pos1 * delta_uv2.x) * -r;
+
+                // We'll use the same tangent/bitangent for each vertex in the triangle
+                vertices[c[0] as usize].tangent =
+                    (tangent + Vector3::from(vertices[c[0] as usize].tangent)).into();
+                vertices[c[1] as usize].tangent =
+                    (tangent + Vector3::from(vertices[c[1] as usize].tangent)).into();
+                vertices[c[2] as usize].tangent =
+                    (tangent + Vector3::from(vertices[c[2] as usize].tangent)).into();
+                vertices[c[0] as usize].bitangent =
+                    (bitangent + Vector3::from(vertices[c[0] as usize].bitangent)).into();
+                vertices[c[1] as usize].bitangent =
+                    (bitangent + Vector3::from(vertices[c[1] as usize].bitangent)).into();
+                vertices[c[2] as usize].bitangent =
+                    (bitangent + Vector3::from(vertices[c[2] as usize].bitangent)).into();
+
+                // Used to average the tangents/bitangents
+                triangles_included[c[0] as usize] += 1;
+                triangles_included[c[1] as usize] += 1;
+                triangles_included[c[2] as usize] += 1;
+            }
+
+            // Average the tangents/bitangents
+            for (i, n) in triangles_included.into_iter().enumerate() {
+                let denom = 1.0 / n as f32;
+                let v = &mut vertices[i];
+                v.tangent = (Vector3::from(v.tangent) * denom).into();
+                v.bitangent = (Vector3::from(v.bitangent) * denom).into();
+            }
+
+            let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(&format!("{:?} Vertex Buffer", file_name)),
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+            let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(&format!("{:?} Index Buffer", file_name)),
+                contents: bytemuck::cast_slice(&m.mesh.indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+
+            model::Mesh {
+                name: file_name.to_string(),
+                vertex_buffer,
+                index_buffer,
+                num_elements: m.mesh.indices.len() as u32,
+                material: m.mesh.material_id.unwrap_or(0),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(model::Model { meshes, materials })
+}
+
+
+
+
 
 
 
@@ -73,18 +241,15 @@ pub async fn load_binary(file_name: &str) -> anyhow::Result<Vec<u8>> {
 // TODO Load also shaders, meshes, etc.
 #[derive(Resource)]
 pub struct Assets {
-    pub skybox_tex: Texture,
-    pub stone_tex: Texture,
-    pub cube_mesh_string: String,
-    pub texture_store: HashMap<String,Texture>,
-    pub mesh_store: HashMap<String,String>,
-    pub mesh_GPU_store: HashMap<String,Mesh>
+    pub skybox_tex: texture::Texture,
+    pub model_store: HashMap<String,model::Model>,
 }
 
 impl Assets {
 
     pub async fn load_and_return(device: &Device) -> Self {
         printlog("In assets.load_and_return");
+
         /*
         let (skybox_tex, stone_tex) = pollster::block_on(async {
             printlog("In assets.load - pollster async function");
@@ -98,90 +263,23 @@ impl Assets {
             (skybox_tex, stone_tex)
         });
         */
-        let skybox_tex = Texture::new_cube_from_file("skybox_bgra.dds", device)
-            .await
-            .unwrap();
-        printlog("In assets.load - loaded skybox");
-        let stone_tex = Texture::new_2d_from_file("stonewall.jpg", device)
-            .await
-            .unwrap();
-
-        let cube_mesh_string = load_string("cube.obj").await.unwrap();
-
-        let skybox_tex2 = Texture::new_cube_from_file("skybox_bgra.dds", device)
-            .await
-            .unwrap();
-        printlog("In assets.load - loaded skybox");
-        let stone_tex2 = Texture::new_2d_from_file("stonewall.jpg", device)
-            .await
-            .unwrap();
-
-        let cube_mesh_string2 = load_string("cube.obj").await.unwrap();
 
 
+        let obj_model: model::Model =
+            load_model("cube.obj", &device, &device.queue()).await.unwrap();
 
-
-        let texture_store = HashMap::from_iter([
-                                        ("skybox_bgra.dds".to_string(), skybox_tex2), 
-                                        ("stonewall.jpg".to_string(), stone_tex2)
-                                    ]);
-        let mesh_store = HashMap::from_iter([
-                                        ("cube.obj".to_string(), cube_mesh_string2)
+        let model_store = HashMap::from_iter([
+                                        ("cube.obj".to_string(), obj_model)
                                     ]);
 
-
-
-
-        let cube_mesh_string_for_mesh = load_string("cube.obj").await.unwrap();
-        let cube_mesh = Mesh::from_string(cube_mesh_string_for_mesh, &device);
-        let mesh_GPU_store = HashMap::from_iter([
-                                        ("cube.obj".to_string(), cube_mesh),
-                                        ("skybox".to_string(), Mesh::quad(&device))
-                                    ]);
-
-
-        //new_texture_bind_group(device, params.texture, wgpu::TextureViewDimension::D2);
-
-
-
-
+        let skybox_tex = 
+            texture::Texture::load_cubemap_from_pngs(
+                "skyboxes/planet_atmosphere", &device, &device.queue()).await;
         Self {
             skybox_tex,
-            stone_tex,
-            cube_mesh_string,
-            texture_store,
-            mesh_store,
-            mesh_GPU_store
+            model_store,
         }
     }
 
 
-    pub fn load(device: Res<Device>, mut commands: Commands) {
-        printlog("In assets.load");
-        let (skybox_tex, stone_tex, cube_mesh_string) = pollster::block_on(async {
-            printlog("In assets.load - pollster async function");
-            let skybox_tex = Texture::new_cube_from_file("skybox_bgra.dds", &device)
-                .await
-                .unwrap();
-            printlog("In assets.load - loaded skybox");
-            let stone_tex = Texture::new_2d_from_file("stonewall.jpg", &device)
-                .await
-                .unwrap();
-            let cube_mesh_string = load_string("cube.obj").await.unwrap();
-            (skybox_tex, stone_tex, cube_mesh_string)
-        });
-
-        let texture_store:HashMap<String,Texture> = HashMap::from_iter([]);
-        let mesh_store:HashMap<String,String> = HashMap::from_iter([]);
-        let mesh_GPU_store:HashMap<String,Mesh> = HashMap::from_iter([]);
-
-        commands.insert_resource(Self {
-            skybox_tex,
-            stone_tex,
-            cube_mesh_string,
-            texture_store,
-            mesh_store,
-            mesh_GPU_store
-        })
-    }
 }

@@ -9,9 +9,10 @@ mod logging;
 mod math;
 mod mesh;
 mod physics_world;
-mod render_target;
 mod systems;
+mod model;
 mod texture;
+mod wgpu_ext;
 
 use crate::app::{run_app};
 
