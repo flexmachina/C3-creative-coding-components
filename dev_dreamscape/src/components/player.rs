@@ -5,7 +5,7 @@ use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
 use crate::events::WindowResizeEvent;
 use crate::input::Input;
-use crate::math::Vec3;
+use crate::math::Vec3f;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
@@ -13,12 +13,12 @@ use crate::frame_time::FrameTime;
 
 #[derive(Component)]
 pub struct Player {
-    target_pt: Option<Vec3>,
+    target_pt: Option<Vec3f>,
     target_body: Option<RigidBodyHandle>,
     collider_handle: ColliderHandle,
     h_rot_acc: f32,
     v_rot_acc: f32,
-    translation_acc: Vec3
+    translation_acc: Vec3f
 }
 
 impl Player {
@@ -27,13 +27,13 @@ impl Player {
         mut physics: ResMut<PhysicsWorld>,
         mut commands: Commands,
     ) {
-        let pos = Vec3::new(7.0, 7.0, 7.0);
+        let pos = Vec3f::new(7.0, 7.0, 7.0);
 
         let camera = Camera::new(
             device.surface_size().width as f32 / device.surface_size().height as f32
         );
         let mut transform = Transform::from_pos(pos);
-        transform.look_at(Vec3::from_element(0.0));
+        transform.look_at(Vec3f::from_element(0.0));
 
         let collider = ColliderBuilder::ball(0.5)
             .restitution(0.7)
@@ -48,14 +48,14 @@ impl Player {
                 target_body: None,
                 h_rot_acc: 0.0,
                 v_rot_acc: 0.0,
-                translation_acc: Vec3::zeros()
+                translation_acc: Vec3f::zeros()
             },
             camera,
             transform
         ));
     }
 
-    pub fn target_pt(&self) -> Option<Vec3> {
+    pub fn target_pt(&self) -> Option<Vec3f> {
         self.target_pt
     }
 
@@ -96,7 +96,7 @@ impl Player {
         input: &Input,
         physics: &mut PhysicsWorld,
     ) {
-        let mut translation: Vec3 = Vec3::from_element(0.0);
+        let mut translation: Vec3f = Vec3f::from_element(0.0);
         if input.forward_down {
             translation += transform.forward();
         }
@@ -143,7 +143,7 @@ impl Player {
         const MIN_BOTTOM_ANGLE: f32 = PI - 0.1;
         const SPEED: f32 = 25.0;
 
-        let angle_to_top = transform.forward().angle(&Vec3::y_axis());
+        let angle_to_top = transform.forward().angle(&Vec3f::y_axis());
         self.v_rot_acc += input.mouse_delta.1 * dt;
         // Protect from overturning - prevent camera from reaching the vertical line with small
         // margin angles.
@@ -161,8 +161,8 @@ impl Player {
         let h_rot = SPEED * dt * self.h_rot_acc;
         self.h_rot_acc -= h_rot;
 
-        transform.rotate_around_axis(Vec3::y_axis().xyz(), h_rot, TransformSpace::World);
-        transform.rotate_around_axis(Vec3::x_axis().xyz(), v_rot, TransformSpace::Local);
+        transform.rotate_around_axis(Vec3f::y_axis().xyz(), h_rot, TransformSpace::World);
+        transform.rotate_around_axis(Vec3f::x_axis().xyz(), v_rot, TransformSpace::Local);
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::components::{Player, Transform};
-use crate::math::{to_point, Vec3};
+use crate::math::{to_point, Vec3f};
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
@@ -12,10 +12,10 @@ pub struct PhysicsBody {
 }
 
 pub struct PhysicsBodyParams {
-    pub pos: Vec3,
-    pub scale: Vec3,
+    pub pos: Vec3f,
+    pub scale: Vec3f,
     pub rotation_angle: f32,
-    pub rotation_axis: Vec3,
+    pub rotation_axis: Vec3f,
     pub movable: bool,
 }
 

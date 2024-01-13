@@ -13,6 +13,7 @@ mod systems;
 mod model;
 mod texture;
 mod wgpu_ext;
+mod renderers;
 
 use crate::app::{run_app};
 

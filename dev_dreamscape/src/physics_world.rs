@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::Resource;
-use crate::math::Vec3;
+use crate::math::Vec3f;
 use rapier3d::control::{EffectiveCharacterMovement, KinematicCharacterController};
 use rapier3d::prelude::*;
 
@@ -61,9 +61,9 @@ impl PhysicsWorld {
     pub fn move_character(
         &self,
         dt: f32,
-        desired_translation: Vec3,
+        desired_translation: Vec3f,
         collider_handle: ColliderHandle,
-    ) -> (Vec3, Vec3) {
+    ) -> (Vec3f, Vec3f) {
         let (EffectiveCharacterMovement { translation, .. }, collider_current_pos) = {
             let (collider_pos, collider_shape) = {
                 let collider = self.colliders.get(collider_handle).unwrap();
@@ -90,10 +90,10 @@ impl PhysicsWorld {
 
     pub fn cast_ray(
         &self,
-        from: Vec3,
-        dir: Vec3,
+        from: Vec3f,
+        dir: Vec3f,
         exclude: Option<ColliderHandle>,
-    ) -> Option<(Vec3, Vec3, ColliderHandle)> {
+    ) -> Option<(Vec3f, Vec3f, ColliderHandle)> {
         let ray = Ray {
             origin: from.into(),
             dir,

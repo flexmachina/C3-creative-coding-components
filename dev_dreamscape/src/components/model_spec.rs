@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::*;
 
+use crate::{model};
 
 pub enum ShaderStage {
     /*
@@ -10,15 +11,15 @@ pub enum ShaderStage {
 }
 
 #[derive(Component)]
-pub struct MeshSpec {
-    meshpath: String,
+pub struct ModelSpec {
+    modelname: String,
     shaderstages: Vec<ShaderStage>
 }
 
-impl MeshSpec {
-    pub fn new(meshpath: String, shaderstages: Vec<ShaderStage>) -> MeshSpec {
+impl ModelSpec {
+    pub fn new(modelname: String, shaderstages: Vec<ShaderStage>) -> ModelSpec {
         Self {
-            meshpath,
+            modelname,
             shaderstages
         }
     }
