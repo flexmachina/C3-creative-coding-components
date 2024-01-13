@@ -2,7 +2,8 @@ use nalgebra as na;
 #[allow(unused_imports)]
 use log::error;
 
-use crate::maths::{Mat4, Mat4f, Point3, Point3f, Vec3, UnitQuat, UnitQuatf};
+use crate::maths::{Mat4, Mat4f, Vec3};
+use crate::transform::Transform;
 
 
 #[rustfmt::skip]
@@ -31,123 +32,64 @@ pub struct CameraUniform {
 
 #[derive(Debug)]
 pub struct Camera {
-    pub position: Point3f,
-    pub yaw: f32,
-    pub pitch: f32,
+    pub transform: Transform,
     pub projection: Projection,
-
-    // Hack to avoid passing around 2 cameras
-    // Ideally we should store the rotation and projection matrices in the same form
-    // and convert to the appropriate coordinate system for rendering
-    pub xr_camera: XrCamera,
 }
 
 impl Camera {
-    pub fn new<P: Into<Point3f>>(
-        position: P,
-        yaw: f32,
-        pitch: f32,
-        projection: Projection 
+    pub fn new(
+        transform: Transform,
+        projection: Projection,
     ) -> Self {
         Self {
-            position: position.into(),
-            yaw: yaw.to_radians(),
-            pitch: pitch.to_radians(),
-            projection,
-            xr_camera: XrCamera { 
-                position: [0.0, 0.0, 0.0].into(),
-                rotation: UnitQuat::identity(),
-                projection: Mat4::identity()
-            }
+            transform,
+            projection
         }
     }
 
     pub fn to_uniform(&self) -> CameraUniform {
         CameraUniform {
-            view_position: self.position.to_homogeneous().into(),
+            view_position: self.transform.position().to_homogeneous().into(),
             view_proj: self.view_proj().into()
         }
     }
-
+    
+    // TODO: pass in transform as a parameter when using ECS
     pub fn view_proj(&self) -> Mat4f {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it seems
         // to cause a sliding effect relative to the skybox
         // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be 
         // halfway inside the clipping area when the camera matrix is identity.
         // OPENGL_TO_WGPU_MATRIX * 
-        self.projection.matrix() * self.calc_matrix(self.position)
+        self.projection.matrix() * self.view_matrix()
     }
-
+    
+    // TODO: pass in transform as a parameter when using ECS
     pub fn view_proj_skybox(&self) -> Mat4f {
+        // Skybox needs view mat at origin
+        let t = Transform::new(Vec3::zeros(), self.transform.rotation(), self.transform.scale());
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
         // skybox rendering.
-        self.projection.matrix() * self.calc_matrix(Point3::origin())
+        //OPENGL_TO_WGPU_MATRIX *
+        self.projection.matrix() * t.matrix().try_inverse().unwrap()
     }
 
-    fn calc_matrix(&self, position: Point3f) -> Mat4f {
-        let (sin_pitch, cos_pitch) = self.pitch.sin_cos();
-        let (sin_yaw, cos_yaw) = self.yaw.sin_cos();
-        let dir = Vec3::new(cos_pitch * sin_yaw, sin_pitch, cos_pitch * cos_yaw).normalize();
-        Mat4::look_at_lh(
-            &position,
-            &(position + dir),
-            &Vec3::y_axis(),
-        )
-    }
-}
-
-#[derive(Debug)]
-pub struct XrCamera {
-    pub position: Point3f,
-    pub rotation: UnitQuatf,
-    pub projection: Mat4f,
-}
-
-impl XrCamera {
-    pub fn to_uniform(&self) -> CameraUniform {
-        // TODO verify this is correct
-        let pos = self.position * -1.;
-
-        CameraUniform {
-            view_position: pos.to_homogeneous().into(),
-            view_proj: self.view_proj().into()
-        }
-    }
-
-    pub fn view_proj_skybox(&self) -> Mat4f {
-        // See below for explanation of the maths
-        let rot = self.rotation.conjugate();
-        let view = Mat4::from(rot.to_rotation_matrix());
-        FLIPY_MATRIX * self.projection * view
-    }
-
-    pub fn view_proj(&self) -> Mat4f {
-        // Dealing with the WebXR coordinate system needs to be taken with care as there are a few complications that
-        // arise from performating rendering with wgpu directly to a WebGL framebuffer.
-        // The WebXR projection matrix, position and orientation memebrs of this struct need to be manipulated because in WebXR 
-        // the framebuffer has a flipped Y coordinate. We therefore:
-        // 1. Pre-mutiply the projection by FLIPY_MATRIX which inverts the y coordinate in clip space. 
-        // 2. Invert the triangle winding order to CW (see create_render_pipeline())
-        // 3. Invert the rotation directions to account for the inverted Y
-        // 4. Invert the position - not sure if this is related to flipping Y, but it seems necessary
-        let pos = self.position * -1.;
-        let rot = self.rotation.conjugate();
-        // TODO: find better way to convert from Position3 to Vec3f
-        let pos = Vec3::new(pos.x, pos.y, pos.z);
-        let view = Mat4::from(rot.to_rotation_matrix()) * Mat4::new_translation(&pos);
-        FLIPY_MATRIX * self.projection * view
+    pub fn view_matrix(&self) -> Mat4f {
+        self.transform.matrix().try_inverse().unwrap()
     }
 }
 
 #[derive(Debug)]
 pub struct Projection {
-    perspective: na::Perspective3<f32>
+    perspective: na::Perspective3<f32>,
+    webxr: bool
 }
 
 impl Projection {
-    pub fn new(width: u32, height: u32, fovy: f32, znear: f32, zfar: f32) -> Self {
+    pub fn new(width: u32, height: u32, fovy: f32, znear: f32, zfar: f32, webxr: bool) -> Self {
         Self {
-            perspective: na::Perspective3::new(width as f32 / height as f32, fovy, znear, zfar)
+            perspective: na::Perspective3::new(width as f32 / height as f32, fovy, znear, zfar),
+            webxr
         }
     }
 
@@ -155,7 +97,28 @@ impl Projection {
         self.perspective.set_aspect(width as f32 / height as f32);
     }
 
-    pub fn matrix(&self) -> &Mat4f {
-        self.perspective.as_matrix()
+    // Dealing with the WebXR coordinate system needs to be taken with care as there are a few complications that
+    // arise from rendering with wgpu directly to a WebGL framebuffer.
+    // The WebXR projection matrix needs to be manipulated because in WebXR 
+    // the framebuffer has a flipped Y coordinate. We therefore:
+    // 1. Pre-mutiply the projection matrix by FLIPY_MATRIX which inverts the y coordinate in clip space. 
+    // 2. Invert the triangle winding order to CW (see create_render_pipeline() calls)
+    //
+    // Note the other WebXR coordinate system related conversion is reversing the 
+    // camera rotation direction in xr.rs
+    pub fn matrix(&self) -> Mat4f {
+        match self.webxr {
+            true => FLIPY_MATRIX * self.perspective.as_matrix(),
+            false => self.perspective.as_matrix().clone()
+        }
+    }
+
+    // Using in WebXR where the projection matrix is provided directly.
+    // rather than decomposed aspect fovy, znear zfar.
+    // There's a github discussion about why, but the TLDR is there could 
+    // potentially be non-standard projection matrices (e.g. with shear),
+    // https://github.com/immersive-web/webxr/issues/461
+    pub fn set_matrix(&mut self, matrix: Mat4f) {
+        self.perspective = na::Perspective3::from_matrix_unchecked(matrix);
     }
 }
