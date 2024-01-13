@@ -27,18 +27,14 @@ impl Transform {
         res
     }
 
-    // Getters
-
-    pub fn from_pos(pos: Vec3f) -> Self {
+    pub fn from_position(pos: Vec3f) -> Self {
         Transform::new(pos, UnitQuat::identity(), Vec3::from_element(1.0))
     }
 
+    // Getters
+
     pub fn matrix(&self) -> Mat4f {
         self.m
-    }
-
-    pub fn view_matrix(&self) -> Mat4f {
-        self.m.try_inverse().unwrap()
     }
 
     pub fn forward(&self) -> Vec3f {
@@ -57,6 +53,14 @@ impl Transform {
         self.pos
     }
 
+    pub fn rotation(&self) -> UnitQuatf {
+        self.rot
+    }
+
+    pub fn scale(&self) -> Vec3f {
+        self.scale
+    }
+
     // Setters
 
     pub fn look_at(&mut self, target: Vec3f) {
@@ -71,6 +75,12 @@ impl Transform {
 
     pub fn set_position(&mut self, pos: Vec3f) {
         self.pos = pos;
+        self.rebuild_matrix();
+    }
+
+    pub fn set_pose(&mut self, pos: Vec3f, rot: UnitQuatf) {
+        self.pos = pos;
+        self.rot = rot;
         self.rebuild_matrix();
     }
 

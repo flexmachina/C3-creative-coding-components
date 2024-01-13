@@ -35,7 +35,7 @@ use winit::platform::web::EventLoopExtWebSys;
 
 use camera_controller::CameraController;
 use instance::Instance;
-use maths::{Vec3, UnitQuat, UnitVec3};
+use maths::{Vec3, Vec3f, Mat4f, UnitQuat, UnitQuatf, UnitVec3};
 use node::Node;
 use pass::Pass;
 use phong::PhongConfig;
@@ -85,6 +85,17 @@ pub struct App {
     xr_app: Option<xr::XrApp>
 }
 
+// pub trait Renderer {
+//     fn update(delta_time: std::time::Duration);
+
+//     fn update_camera(camera_pos: Vec3f, camera_rot: UnitQuatf, projection_matrix: Mat4f);
+ 
+//     // TODO
+//     //fn update_controls;
+
+//     fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>, viewport: Option<Rect>, clear: bool);
+// }
+
 impl App {
     async fn new(window: Window, webxr: bool) -> Self {
         // State::new uses async code, so we're going to wait for it to finish
@@ -118,7 +129,8 @@ async fn create_scene(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
     width: u32,
-    height: u32) -> Scene {
+    height: u32,
+    webxr: bool) -> Scene {
 
     let light = light::Light{
         position: [2.0, 2.0, 2.0].into(),
@@ -127,7 +139,8 @@ async fn create_scene(
 
     let projection = camera::Projection::new(
         width, height, 
-        45.0, 0.1, 100.0);
+        45.0, 0.1, 100.0, 
+        webxr);
     let transform = transform::Transform::default();
 
     let camera = camera::Camera::new(
@@ -308,7 +321,7 @@ impl State {
 
         let cursor_pos = winit::dpi::PhysicalPosition {x:0.0, y:0.0};
 
-        let scene = create_scene(&device, &queue, size.width, size.height).await;
+        let scene = create_scene(&device, &queue, size.width, size.height, webxr).await;
 
         let render_state = create_redner_state(device, queue, surface_format, size.width, size.height, webxr).await;
         let window_state = WindowState{window, surface, config, size, cursor_pos, mouse_pressed: false};
@@ -373,6 +386,11 @@ impl State {
         // Update camera
         self.camera_controller.update_camera(&mut self.scene.camera, dt);
         self.update_scene(dt);
+    }
+
+    fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
+        self.scene.camera.transform.set_pose(pos, rot);
+        self.scene.camera.projection.set_matrix(projection_matrix);
     }
 
     fn update_scene(&mut self, dt: std::time::Duration) {

@@ -9,8 +9,7 @@ use js_sys::{Object, Reflect};
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 
-use crate::camera::XrCamera;
-use crate::maths::{Mat4, Mat4f, Point3, Quat, UnitQuat};
+use crate::maths::{Mat4, Mat4f, Quat, Vec3f, UnitQuat};
 
 
 fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFrame)>) -> u32 {
@@ -178,19 +177,27 @@ impl XrApp {
 
                 // Get decomposed position and orientation as they are easier to operate on than the view matrix
                 let pos = view.transform().position();
-                let position = Point3::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
+                let position = Vec3f::new(pos.x() as f32, pos.y() as f32, pos.z() as f32);
                 let r = view.transform().orientation();
                 let rotation = Quat::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
                 let rotation = UnitQuat::new_normalize(rotation);
-                state.scene.camera.xr_camera = XrCamera{position, rotation, projection: to_mat(&view.projection_matrix())};
+
+                // Need to reverse rotation direction
+                // TDOD: Confirm this is works correctly with rapier
+                let rotation = rotation.conjugate();
+                
+                // Callback
+                state.update_camera(position, rotation, to_mat(&view.projection_matrix()));
 
                 let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
                 last_frame_time.replace(time);
+                // Callback
                 state.update_scene(delta_time);
 
                 // Each view is rendered to a different region of the same framebuffer,
                 // so only clear the framebuffer once before the first render pass.
                 let clear = view_idx == 0;
+                // Callback
                 state.render_to_texture(&color_texture, Some(&depth_texture), Some(vp), clear);
             }
 

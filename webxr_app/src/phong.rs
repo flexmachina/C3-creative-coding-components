@@ -19,7 +19,6 @@ pub struct PhongConfig {
 }
 
 pub struct PhongPass {
-    webxr: bool,
     // Common uniform buffers
     pub camera_buffer: wgpu::Buffer,
     pub light_buffer: wgpu::Buffer,
@@ -335,8 +334,6 @@ impl PhongPass {
         let instance_buffers = HashMap::new();
 
         PhongPass {
-            webxr,
-
             camera_buffer,
             light_buffer,
             instance_buffers,
@@ -375,16 +372,10 @@ impl Pass for PhongPass {
             bytemuck::cast_slice(&[light.to_uniform()]),
         );
 
-        let camera_uniform = if self.webxr {
-                camera.xr_camera.to_uniform()
-            } else {
-                camera.to_uniform()
-            };
-
         queue.write_buffer(
             &self.camera_buffer,
             0,
-            bytemuck::cast_slice(&[camera_uniform]),
+            bytemuck::cast_slice(&[camera.to_uniform()]),
         );
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
