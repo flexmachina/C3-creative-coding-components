@@ -119,6 +119,7 @@ pub fn prepare_render_pipelines(
 
 pub fn render(
     device: Res<Device>,
+    assets: Res<Assets>,
     renderers: ResMut<Renderers>,
     player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
     mut meshes_qry: Query<(&ModelSpec, &Transform, Option<&RenderOrder>)>,
@@ -128,6 +129,9 @@ pub fn render(
     let player_cam = player_cam_qry.single();
     //let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
 
+    //TODO, to get skybox draw compiling I think I need to figure out into_inner, or as_ref or 
+    //maybe it's a matter of setting lifetimes like above function
+    //new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a>
     let (skybox, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
     let surface = device.surface(); 
     let color_texture = surface.get_current_texture().unwrap();
@@ -140,6 +144,7 @@ pub fn render(
         &None,
         true
     );
+    ///////////////////////////////////////////////////////////
 
     device.queue().submit([skybox_cmd_buffer]);
 

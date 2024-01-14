@@ -91,7 +91,9 @@ pub async fn init_app(world: &mut World) {
     });
     world.insert_resource(device);
     world.insert_resource(assets);
-    world.insert_resource(renderers);
+
+    //NOTE not sure if this ok as just init_resource
+    world.insert_non_send_resource(renderers);
     world.insert_resource(FrameTime::new());
     world.insert_resource(Input::new());
     world.insert_resource(PhysicsWorld::new());
