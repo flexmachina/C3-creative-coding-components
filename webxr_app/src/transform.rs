@@ -10,19 +10,19 @@ pub enum TransformSpace {
 
 #[derive(Debug)]
 pub struct Transform {
-    // Cached transform matrix
-    m: Mat4f,
     // Individual components
-    scale: Vec3f,
     pos: Vec3f,
     rot: UnitQuatf,
+    scale: Vec3f,
+    // Cached transform matrix
+    m: Mat4f,
 }
 
 // TODO Parent-child relationships
 impl Transform {
     pub fn new(pos: Vec3f, rot: UnitQuatf, scale: Vec3f) -> Self {
         let m = Mat4::identity();
-        let mut res = Self { m, rot, scale, pos };
+        let mut res = Self { pos, rot, scale, m };
         res.rebuild_matrix();
         res
     }
