@@ -118,6 +118,7 @@ impl Projection {
     // There's a github discussion about why, but the TLDR is there could 
     // potentially be non-standard projection matrices (e.g. with shear),
     // https://github.com/immersive-web/webxr/issues/461
+    #[allow(dead_code)]
     pub fn set_matrix(&mut self, matrix: Mat4f) {
         self.perspective = na::Perspective3::from_matrix_unchecked(matrix);
     }

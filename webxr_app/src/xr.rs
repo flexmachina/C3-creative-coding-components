@@ -182,10 +182,6 @@ impl XrApp {
                 let rotation = Quat::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
                 let rotation = UnitQuat::new_normalize(rotation);
 
-                // Need to reverse rotation direction
-                // TDOD: Confirm this is works correctly with rapier
-                let rotation = rotation.conjugate();
-                
                 // Callback
                 state.update_camera(position, rotation, to_mat(&view.projection_matrix()));
 

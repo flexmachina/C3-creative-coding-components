@@ -387,7 +387,8 @@ impl State {
         self.camera_controller.update_camera(&mut self.scene.camera, dt);
         self.update_scene(dt);
     }
-
+    
+    #[allow(dead_code)]
     fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
         self.scene.camera.transform.set_pose(pos, rot);
         self.scene.camera.projection.set_matrix(projection_matrix);

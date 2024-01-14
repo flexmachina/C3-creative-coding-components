@@ -6,11 +6,11 @@ use winit::event::*;
 
 use crate::{
     camera::Camera,
-    transform::{Transform, TransformSpace},
+    transform::Transform,
     maths::{Vec3, Vec3f}
 };
 
-
+#[allow(dead_code)]
 const SAFE_FRAC_PI_2: f32 = FRAC_PI_2 - 0.0001;
 
 #[derive(Debug)]
@@ -187,6 +187,9 @@ impl CameraController {
 
         self.v_rot_acc += self.rotate_vertical * self.sensitivity * dt;
 
+        log::error!("rotate_vertical: {}", self.rotate_vertical);
+        log::error!("rotate_horizontal: {}", self.rotate_horizontal);
+
         // // Protect from overturning - prevent camera from reaching the vertical line with small
         // // margin angles.
         if self.v_rot_acc + angle_to_top <= MIN_TOP_ANGLE {
@@ -203,8 +206,10 @@ impl CameraController {
         let h_rot = self.speed * dt * self.h_rot_acc;
         self.h_rot_acc -= h_rot;
 
-        transform.rotate_around_axis(Vec3::y_axis().xyz(), h_rot, TransformSpace::World);
-        transform.rotate_around_axis(Vec3::x_axis().xyz(), v_rot, TransformSpace::Local);
+        // The game world uses a right-hand coordinate system (where a positive angle
+        // is anti-clockwise), so negate the angles
+        transform.rotate_axis(&Vec3::y_axis(), -h_rot);
+        transform.rotate_local_axis(&Vec3::x_axis(), -v_rot);
 
         // If process_mouse isn't called every frame, these values
         // will not get set to zero, and the camera will rotate

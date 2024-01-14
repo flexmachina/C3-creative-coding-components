@@ -1,12 +1,6 @@
 use nalgebra as na;
 
-use crate::maths::{Mat4, Mat4f, Vec3, Vec3f, Quatf, UnitQuat, UnitQuatf};
-
-
-pub enum TransformSpace {
-    Local,
-    World,
-}
+use crate::maths::{Mat4, Mat4f, Vec3, Vec3f, Quatf, UnitQuat, UnitQuatf, UnitVec3f};
 
 #[derive(Debug)]
 pub struct Transform {
@@ -95,19 +89,36 @@ impl Transform {
         self.rebuild_matrix();
     }
 
-    pub fn rotate_around_axis(&mut self, axis: Vec3f, angle: f32, space: TransformSpace) {
-        let axis = axis.normalize();
-        let axis: na::Matrix<f32, na::Const<3>, na::Const<1>, na::ArrayStorage<f32, 3, 1>> = match space {
-            TransformSpace::Local => axis,
-            TransformSpace::World => self.m.try_inverse().unwrap().transform_vector(&axis),
-        };
-
-        self.rot = UnitQuat::from_scaled_axis(axis * angle) * self.rot;
+    // Rotate by the given rotation.
+    #[inline]
+    pub fn rotate(&mut self, rotation: UnitQuatf) {
+        self.rot = rotation * self.rot;
         self.rebuild_matrix();
     }
 
+    // Rotate relative to the current rotation.
+    #[inline]
+    pub fn rotate_local(&mut self, rotation: UnitQuatf) {
+        self.rot *= rotation;
+        self.rebuild_matrix();
+    }
+    
+    // Rotate around the given global `axis` by `angle` (in radians).
+    #[inline]
+    pub fn rotate_axis(&mut self, axis: &UnitVec3f, angle: f32) {
+        self.rotate(UnitQuat::from_axis_angle(axis, angle));
+        // self.rotate calls rebuild_matrix
+    }
+
+    // Rotate the local `axis` by `angle` (in radians).
+    #[inline]
+    pub fn rotate_local_axis(&mut self, axis: &UnitVec3f, angle: f32) {
+        self.rotate_local(UnitQuat::from_axis_angle(axis, angle));
+        // self.rotate calls rebuild_matrix
+    }
+
     fn rebuild_matrix(&mut self) {
-        let rot_m = na::Rotation3::from(self.rot).transpose();
+        let rot_m = na::Rotation3::from(self.rot);
         let tr_m = na::Translation3::new(self.pos.x, self.pos.y, self.pos.z);
         let rot_and_tr_m = tr_m * rot_m;
         self.m = rot_and_tr_m
