@@ -2,6 +2,7 @@ use wgpu::{util::DeviceExt, Device, Queue};
 
 use crate::{
     camera::Camera,
+    transform::Transform,
     light::Light,
     maths::Mat4,
     node::Node,
@@ -120,7 +121,7 @@ impl Pass for SkyboxPass {
         device: &Device,
         queue: &Queue,
         _nodes: &Vec<Node>,
-        camera: &Camera,
+        camera: (&Camera, &Transform),
         _light: &Light,
         viewport: &Option<Rect>,
         clear_color: bool,
@@ -128,7 +129,7 @@ impl Pass for SkyboxPass {
     ) -> wgpu::CommandBuffer {
 
         let uniform = Uniform { 
-            view_proj_inv: camera.view_proj_skybox().try_inverse().unwrap().into()
+            view_proj_inv: camera.0.view_proj_skybox(camera.1).try_inverse().unwrap().into()
         };
 
         queue.write_buffer(

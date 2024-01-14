@@ -5,7 +5,6 @@ use winit::dpi::PhysicalPosition;
 use winit::event::*;
 
 use crate::{
-    camera::Camera,
     transform::Transform,
     maths::{Vec3, Vec3f}
 };
@@ -101,10 +100,10 @@ impl CameraController {
         };
     }
 
-    pub fn update_camera(&mut self, camera: &mut Camera, dt: Duration) {
+    pub fn update_camera_transform(&mut self, transform: &mut Transform, dt: Duration) {
         let dt = dt.as_secs_f32();
-        self.rotate(&mut camera.transform, dt);
-        self.translate(&mut camera.transform, dt);
+        self.rotate(transform, dt);
+        self.translate(transform, dt);
     }
 
     /*

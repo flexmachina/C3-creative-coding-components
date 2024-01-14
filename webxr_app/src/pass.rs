@@ -1,4 +1,5 @@
 use crate::camera::Camera;
+use crate::transform::Transform;
 use crate::Rect;
 use crate::light::Light;
 use crate::node::Node;
@@ -12,7 +13,7 @@ pub trait Pass {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         nodes: &Vec<Node>,
-        camera: &Camera,
+        camera: (&Camera, &Transform),
         light: &Light,
         viewport: &Option<Rect>,
         clear_color: bool,

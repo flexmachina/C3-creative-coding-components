@@ -32,50 +32,47 @@ pub struct CameraUniform {
 
 #[derive(Debug)]
 pub struct Camera {
-    pub transform: Transform,
     pub projection: Projection,
 }
 
 impl Camera {
     pub fn new(
-        transform: Transform,
         projection: Projection,
     ) -> Self {
         Self {
-            transform,
             projection
         }
     }
 
-    pub fn to_uniform(&self) -> CameraUniform {
+    pub fn to_uniform(&self, transform: &Transform) -> CameraUniform {
         CameraUniform {
-            view_position: self.transform.position().to_homogeneous().into(),
-            view_proj: self.view_proj().into()
+            view_position: transform.position().to_homogeneous().into(),
+            view_proj: self.view_proj(&transform).into()
         }
     }
     
     // TODO: pass in transform as a parameter when using ECS
-    pub fn view_proj(&self) -> Mat4f {
+    pub fn view_proj(&self, transform: &Transform) -> Mat4f {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it seems
         // to cause a sliding effect relative to the skybox
         // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be 
         // halfway inside the clipping area when the camera matrix is identity.
         // OPENGL_TO_WGPU_MATRIX * 
-        self.projection.matrix() * self.view_matrix()
+        self.projection.matrix() * self.view_matrix(&transform)
     }
     
     // TODO: pass in transform as a parameter when using ECS
-    pub fn view_proj_skybox(&self) -> Mat4f {
+    pub fn view_proj_skybox(&self, transform: &Transform) -> Mat4f {
         // Skybox needs view mat at origin
-        let t = Transform::new(Vec3::zeros(), self.transform.rotation(), self.transform.scale());
+        let t_at_origin = Transform::new(Vec3::zeros(), transform.rotation(), transform.scale());
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
         // skybox rendering.
         //OPENGL_TO_WGPU_MATRIX *
-        self.projection.matrix() * t.matrix().try_inverse().unwrap()
+        self.projection.matrix() * t_at_origin.matrix().try_inverse().unwrap()
     }
 
-    pub fn view_matrix(&self) -> Mat4f {
-        self.transform.matrix().try_inverse().unwrap()
+    pub fn view_matrix(&self, transform: &Transform) -> Mat4f {
+        transform.matrix().try_inverse().unwrap()
     }
 }
 

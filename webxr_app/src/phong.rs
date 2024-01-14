@@ -9,6 +9,7 @@ use crate::{
     model::{self, DrawModel, Vertex},
     node::Node,
     pass::Pass,
+    transform::Transform,
     Rect,
     shader_utils,
     texture,
@@ -359,7 +360,7 @@ impl Pass for PhongPass {
         device: &Device,
         queue: &Queue,
         nodes: &Vec<Node>,
-        camera: &Camera,
+        camera: (&Camera, &Transform),
         light: &Light,
         viewport: &Option<Rect>,
         clear_color: bool,
@@ -375,7 +376,7 @@ impl Pass for PhongPass {
         queue.write_buffer(
             &self.camera_buffer,
             0,
-            bytemuck::cast_slice(&[camera.to_uniform()]),
+            bytemuck::cast_slice(&[camera.0.to_uniform(camera.1)]),
         );
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {

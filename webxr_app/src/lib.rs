@@ -65,6 +65,7 @@ struct RenderState {
 struct Scene {
     light: light::Light,
     camera: camera::Camera,
+    camera_transform: transform::Transform,
     nodes: Vec<Node>,
 }
 
@@ -141,11 +142,9 @@ async fn create_scene(
         width, height, 
         45.0, 0.1, 100.0, 
         webxr);
-    let transform = transform::Transform::default();
+    let camera_transform = transform::Transform::default();
 
     let camera = camera::Camera::new(
-        // TODO: add support for init with rotation
-        transform,
         projection
     );
 
@@ -193,6 +192,7 @@ async fn create_scene(
     Scene {
         light,
         camera,
+        camera_transform,
         nodes
     }
 }
@@ -389,13 +389,13 @@ impl State {
 
     fn update(&mut self, dt: std::time::Duration) {
         // Update camera
-        self.camera_controller.update_camera(&mut self.scene.camera, dt);
+        self.camera_controller.update_camera_transform(&mut self.scene.camera_transform, dt);
         self.update_scene(dt);
     }
     
     #[allow(dead_code)]
     fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
-        self.scene.camera.transform.set_pose(pos, rot);
+        self.scene.camera_transform.set_pose(pos, rot);
         self.scene.camera.projection.set_matrix(projection_matrix);
     }
 
@@ -429,7 +429,7 @@ impl State {
             &self.render_state.device,
             &self.render_state.queue,
             &self.scene.nodes,
-            &self.scene.camera,
+            (&self.scene.camera, &self.scene.camera_transform),
             &self.scene.light,
             &viewport,
             clear,
@@ -442,7 +442,7 @@ impl State {
             &self.render_state.device,
             &self.render_state.queue,
             &self.scene.nodes,
-            &self.scene.camera,
+            (&self.scene.camera, &self.scene.camera_transform),
             &self.scene.light,
             &viewport,
             false,
