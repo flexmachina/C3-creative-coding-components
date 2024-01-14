@@ -167,8 +167,13 @@ async fn create_scene(
                     let angle: f32 = 45.0;
                     UnitQuat::from_axis_angle(&UnitVec3::new_normalize(position), angle.to_radians())
                 };
-
-                Instance { position, rotation }
+                
+                let transform = transform::Transform::new(
+                    position, 
+                    rotation, 
+                    Vec3::from_element(1.0)
+                );
+                Instance { transform }
             })
         })
         .collect::<Vec<_>>();
