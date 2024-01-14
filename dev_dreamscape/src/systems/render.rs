@@ -1,6 +1,7 @@
-use crate::components::{Camera, RenderOrder, Transform, Player, MeshSpec, SkyboxSpec};
+use crate::components::{Camera, Skybox, RenderOrder, Transform, Player, ModelSpec};
 use crate::mesh::Mesh;
-use crate::assets::Assets;
+use crate::assets::{Assets,Renderers};
+use crate::renderers::{SkyboxPass};
 
 use crate::device::Device;
 use bevy_ecs::prelude::*;
@@ -82,9 +83,21 @@ fn new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a> {
 pub fn prepare_render_pipelines(
     device: Res<Device>,
     assets: Res<Assets>,
+    renderers: Res<Renderers>,
     mut commands: Commands,
     player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
+    skybox_qry: Query<&Skybox>,
 ) {
+
+    let webxr = false;
+    let skybox = skybox_qry.single();
+    renderers.skybox_renderer = Some(SkyboxPass::new(
+        &device,
+        &assets,
+        &skybox,
+        device.surface_texture_format(),
+        webxr
+    ))
 
     /*    
     //Leave as single pipeline to render skybox
@@ -107,14 +120,14 @@ pub fn prepare_render_pipelines(
 pub fn render(
     device: Res<Device>,
     player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
-    mut meshes_qry: Query<(&MeshSpec, &Transform, Option<&RenderOrder>)>,
-    mut skyboxes_qry: Query<(&SkyboxSpec, &Transform, Option<&RenderOrder>)>,
+    mut meshes_qry: Query<(&ModelSpec, &Transform, Option<&RenderOrder>)>,
+    mut skyboxes_qry: Query<(&Skybox, &Transform, Option<&RenderOrder>)>,
 ) {
 
     let player_cam = player_cam_qry.single();
     //let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
 
-    let (skybox_spec, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
+    let (skybox, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
    
 
     /*

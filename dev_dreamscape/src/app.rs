@@ -14,7 +14,7 @@ use winit::window::{WindowBuilder, Window};
 use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent};
 
 use crate::systems::*;
-use crate::assets::Assets;
+use crate::assets::{Assets, Renderers};
 use crate::logging::{init_logging, printlog};
 
 /*
@@ -74,6 +74,8 @@ pub async fn init_app(world: &mut World) {
         Assets::load_and_return(&device).await
     });
     */
+    let renderers = Renderers::init(&device);
+
     printlog("running init_app - done loading assets outside schedule");
 
 
@@ -89,6 +91,7 @@ pub async fn init_app(world: &mut World) {
     });
     world.insert_resource(device);
     world.insert_resource(assets);
+    world.insert_resource(renderers);
     world.insert_resource(FrameTime::new());
     world.insert_resource(Input::new());
     world.insert_resource(PhysicsWorld::new());

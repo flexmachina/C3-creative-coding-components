@@ -16,11 +16,11 @@ ktx2 = "0.3.0"
 winit = "0.28.4"
 env_logger = "0.10"
 log = "0.4"
-wgpu = "0.17"
+wgpu = { version = "0.17", features = ["naga"]}
 pollster = "0.3"
 bytemuck = { version = "1.12", features = [ "derive" ] }
 anyhow = "1.0"
-cgmath = "0.18"
+#cgmath = "0.18"
 tobj = { version = "3.2.1", features = [
     "async",
 ]}
@@ -32,6 +32,10 @@ ddsfile = "0.5.1"
 #imgui-wgpu = "0.22.0"
 rapier3d = { version = "0.17.2", features = ["simd-stable"] }
 web-time = "0.2.3"
+naga = { version = "0.13", features = ["wgsl-in", "wgsl-out", "clone", "span"] }
+naga_oil = "0.10.0"
+instant = "0.1"
+getrandom = { version = "0.2.10" }
 
 [build-dependencies]
 anyhow = "1.0"
@@ -50,14 +54,69 @@ features = ["png", "jpeg"]
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "1.0"
-wgpu = { version = "0.17", features = ["webgl","fragile-send-sync-non-atomic-wasm"]}
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = [
-    "Document",
-    "Window",
-    "Element",
-    "Location"
+getrandom = { version = "0.2.10", features = ["js"] }
+glow = "0.12.3"
+js-sys = "0.3.64"
+wgpu = { version = "0.17", features = ["webgl","fragile-send-sync-non-atomic-wasm","naga"]}
+wgpu-hal = { version = "0.17.0" }
+wasm-bindgen = "0.2.87"
+wasm-bindgen-futures = "0.4.37"
+web-sys = { version = "0.3.37", features = [
+  # STANDARD
+  'console',
+  'Document',
+  'Element',
+  'Headers',
+  "Location",
+  'Navigator',
+  'Window',
+  # IO
+  # 'Json',
+  'Request',
+  'RequestInit',
+  'RequestMode',
+  'Response',
+  # 'Url',
+  # WEBGL
+  'Gpu',
+  'HtmlCanvasElement',
+  'WebGl2RenderingContext',
+  'WebGlFramebuffer',
+  ## XR
+  'DomPointReadOnly',
+  'XrBoundedReferenceSpace',
+  'XrEye',
+  'XrFrame',
+  'XrHandedness',
+  'XrInputSource',
+  'XrInputSourceArray',
+  'XrInputSourceEvent',
+  'XrInputSourceEventInit',
+  'XrInputSourcesChangeEvent',
+  'XrJointPose',
+  'XrJointSpace',
+  'XrPose',
+  'XrReferenceSpace',
+  'XrReferenceSpaceEvent',
+  'XrReferenceSpaceEventInit',
+  'XrReferenceSpaceType',
+  'XrRenderState',
+  'XrRenderStateInit',
+  'XrRigidTransform',
+  'XrSession',
+  'XrSessionEvent',
+  'XrSessionEventInit',
+  'XrSessionInit',
+  'XrSessionMode',
+  'XrSpace',
+  'XrTargetRayMode',
+  'XrView',
+  'XrViewerPose',
+  'XrViewport',
+  'XrVisibilityState',
+  'XrWebGlLayer',
+  'XrWebGlLayerInit',
+  'XrSystem',
 ]}
 reqwest = { version = "0.11" }
 

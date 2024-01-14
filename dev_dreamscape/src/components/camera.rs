@@ -1,4 +1,4 @@
-use crate::math::Mat4;
+use crate::math::Mat4f;
 use bevy_ecs::prelude::*;
 use rapier3d::na;
 
@@ -8,7 +8,7 @@ pub struct Camera {
     znear: f32,
     zfar: f32,
     fov: f32,
-    proj_matrix: Mat4,
+    proj_matrix: Mat4f,
 }
 
 impl Camera {
@@ -27,7 +27,7 @@ impl Camera {
         }
     }
 
-    pub fn proj_matrix(&self) -> Mat4 {
+    pub fn proj_matrix(&self) -> Mat4f {
         self.proj_matrix
     }
 
