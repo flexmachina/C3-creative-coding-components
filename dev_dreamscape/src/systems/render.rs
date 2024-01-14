@@ -83,7 +83,7 @@ fn new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a> {
 pub fn prepare_render_pipelines(
     device: Res<Device>,
     assets: Res<Assets>,
-    renderers: Res<Renderers>,
+    mut renderers: ResMut<Renderers>,
     mut commands: Commands,
     player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
     skybox_qry: Query<&Skybox>,

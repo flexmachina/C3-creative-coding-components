@@ -1,8 +1,7 @@
 use wgpu::util::DeviceExt;
 use crate::{
-    camera::Camera,
     assets::{Assets}, 
-    components::{Skybox},
+    components::{Skybox,Camera,Transform},
     device::Device,
     math::{Mat4,Rect},
     renderers::{shader_utils},
@@ -117,16 +116,19 @@ impl SkyboxPass {
         &mut self,
         color_view: &wgpu::TextureView,
         device: &Device,
-        camera: &Camera,
+        camera: (&Camera, &Transform) ,
         viewport: &Option<Rect>,
         clear_color: bool
     ) -> wgpu::CommandBuffer {
 
+        /*
         let view_proj = if self.webxr {
             camera.xr_camera.view_proj_skybox()
         } else {
             camera.view_proj_skybox()
         };
+        */
+        let view_proj = camera.0.view_proj_skybox(camera.1);
 
         let uniform = Uniform { 
             view_proj_inv: view_proj.try_inverse().unwrap().into()

@@ -1,6 +1,5 @@
 use std::f32::consts::PI;
-use crate::components::camera::Camera;
-use crate::components::transform::TransformSpace;
+use crate::components::camera::{Camera,Projection};
 use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
 use crate::events::WindowResizeEvent;
@@ -29,10 +28,17 @@ impl Player {
     ) {
         let pos = Vec3f::new(7.0, 7.0, 7.0);
 
+        let znear = 0.1;
+        let zfar = 100.0;
+        let fov = 45.0;
+        let webxr = false;
+
         let camera = Camera::new(
-            device.surface_size().width as f32 / device.surface_size().height as f32
+            Projection::new(device.surface_size().width as u32,
+                            device.surface_size().height as u32, 
+                            fov, znear, zfar, webxr)
         );
-        let mut transform = Transform::from_pos(pos);
+        let mut transform = Transform::from_position(pos);
         transform.look_at(Vec3f::from_element(0.0));
 
         let collider = ColliderBuilder::ball(0.5)
@@ -161,8 +167,10 @@ impl Player {
         let h_rot = SPEED * dt * self.h_rot_acc;
         self.h_rot_acc -= h_rot;
 
-        transform.rotate_around_axis(Vec3f::y_axis().xyz(), h_rot, TransformSpace::World);
-        transform.rotate_around_axis(Vec3f::x_axis().xyz(), v_rot, TransformSpace::Local);
+        //transform.rotate_around_axis(Vec3f::y_axis().xyz(), h_rot, TransformSpace::World);
+        //transform.rotate_around_axis(Vec3f::x_axis().xyz(), v_rot, TransformSpace::Local);
+        transform.rotate_axis(&Vec3f::y_axis().xyz(), h_rot);
+        transform.rotate_local_axis(&Vec3f::x_axis().xyz(), v_rot);
     }
 }
 
@@ -186,7 +194,8 @@ fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
 }
 
 fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, device: &Device) {
-    camera.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);
+    //camera.Projection.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);
+    camera.projection.resize(new_surface_size.width as u32 , new_surface_size.height as u32);
     //TODO handle camera resize!
     /*
     if let Some(target) = camera.target_mut() {

@@ -10,7 +10,7 @@ mod skybox;
 mod transform;
 //mod grab;
 
-pub use camera::Camera;
+pub use camera::{Camera,Projection};
 pub use floor_box::FloorBox;
 pub use free_box::FreeBox;
 pub use model_spec::{ModelSpec, ShaderStage};
@@ -19,5 +19,5 @@ pub use player::Player;
 pub use render_order::RenderOrder;
 pub use skybox::{Skybox};
 //pub use player_target::PlayerTarget;
-pub use transform::{Transform, TransformSpace};
+pub use transform::{Transform};
 //pub use grab::Grab;

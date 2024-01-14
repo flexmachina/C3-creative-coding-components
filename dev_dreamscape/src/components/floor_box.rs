@@ -2,7 +2,7 @@ use crate::assets::Assets;
 use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams};
 use crate::components::{ModelSpec, ShaderStage};
-use crate::math::Vec3f;
+use crate::math::{Vec3f,UnitQuatf};
 use crate::mesh::Mesh;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
@@ -19,8 +19,9 @@ impl FloorBox {
         let modelspec = ModelSpec::new(String::from("cube.obj"),vec![ShaderStage::Diffuse]);
 
         let pos = Vec3f::from_element(0.0);
+        let rot = UnitQuatf::identity();
         let scale = Vec3f::new(100.0, 0.5, 100.0);
-        let transform = Transform::new(pos, scale);
+        let transform = Transform::new(pos, rot, scale);
 
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {

@@ -1,40 +1,34 @@
-use crate::math::{Mat4f, Quatf, UnitQuatf, Vec3f};
-use bevy_ecs::prelude::*;
 use rapier3d::na;
+use bevy_ecs::prelude::*;
+use crate::math::{Mat4, Mat4f, Vec3, Vec3f, Quatf, UnitQuat, UnitQuatf, UnitVec3f};
 
-pub enum TransformSpace {
-    Local,
-    World,
-}
-
-#[derive(Component)]
+#[derive(Component,Debug)]
 pub struct Transform {
-    m: Mat4f,
-    scale: Vec3f,
+    // Individual components
     pos: Vec3f,
     rot: UnitQuatf,
+    scale: Vec3f,
+    // Cached transform matrix
+    m: Mat4f,
 }
 
 // TODO Parent-child relationships
 impl Transform {
-    pub fn new(pos: Vec3f, scale: Vec3f) -> Self {
-        let m = Mat4f::identity();
-        let rot = UnitQuatf::identity();
-        let mut res = Self { m, rot, scale, pos };
+    pub fn new(pos: Vec3f, rot: UnitQuatf, scale: Vec3f) -> Self {
+        let m = Mat4::identity();
+        let mut res = Self { pos, rot, scale, m };
         res.rebuild_matrix();
         res
     }
 
-    pub fn from_pos(pos: Vec3f) -> Self {
-        Transform::new(pos, Vec3f::from_element(1.0))
+    pub fn from_position(pos: Vec3f) -> Self {
+        Transform::new(pos, UnitQuat::identity(), Vec3::from_element(1.0))
     }
+
+    // Getters
 
     pub fn matrix(&self) -> Mat4f {
         self.m
-    }
-
-    pub fn view_matrix(&self) -> Mat4f {
-        self.m.try_inverse().unwrap()
     }
 
     pub fn forward(&self) -> Vec3f {
@@ -53,8 +47,18 @@ impl Transform {
         self.pos
     }
 
+    pub fn rotation(&self) -> UnitQuatf {
+        self.rot
+    }
+
+    pub fn scale(&self) -> Vec3f {
+        self.scale
+    }
+
+    // Setters
+
     pub fn look_at(&mut self, target: Vec3f) {
-        self.rot = UnitQuatf::look_at_rh(&(target - self.pos), &Vec3f::y_axis());
+        self.rot = UnitQuat::look_at_rh(&(target - self.pos), &Vec3::y_axis());
         self.rebuild_matrix();
     }
 
@@ -68,30 +72,53 @@ impl Transform {
         self.rebuild_matrix();
     }
 
+    pub fn set_pose(&mut self, pos: Vec3f, rot: UnitQuatf) {
+        self.pos = pos;
+        self.rot = rot;
+        self.rebuild_matrix();
+    }
+
     pub fn set_scale(&mut self, scale: Vec3f) {
         self.scale = scale;
         self.rebuild_matrix();
     }
 
     pub fn set(&mut self, pos: Vec3f, rotation: Quatf) {
-        self.rot = UnitQuatf::from_quaternion(rotation);
+        self.rot = UnitQuat::from_quaternion(rotation);
         self.pos = pos;
         self.rebuild_matrix();
     }
 
-    pub fn rotate_around_axis(&mut self, axis: Vec3f, angle: f32, space: TransformSpace) {
-        let axis = axis.normalize();
-        let axis = match space {
-            TransformSpace::Local => axis,
-            TransformSpace::World => self.m.try_inverse().unwrap().transform_vector(&axis),
-        };
-
-        self.rot = UnitQuatf::from_scaled_axis(axis * angle) * self.rot;
+    // Rotate by the given rotation.
+    #[inline]
+    pub fn rotate(&mut self, rotation: UnitQuatf) {
+        self.rot = rotation * self.rot;
         self.rebuild_matrix();
     }
 
+    // Rotate relative to the current rotation.
+    #[inline]
+    pub fn rotate_local(&mut self, rotation: UnitQuatf) {
+        self.rot *= rotation;
+        self.rebuild_matrix();
+    }
+    
+    // Rotate around the given global `axis` by `angle` (in radians).
+    #[inline]
+    pub fn rotate_axis(&mut self, axis: &Vec3f, angle: f32) {
+        self.rotate(UnitQuat::from_axis_angle(&na::Unit::new_normalize(axis.clone()), angle));
+        // self.rotate calls rebuild_matrix
+    }
+
+    // Rotate the local `axis` by `angle` (in radians).
+    #[inline]
+    pub fn rotate_local_axis(&mut self, axis: &Vec3f, angle: f32) {
+        self.rotate_local(UnitQuat::from_axis_angle(&na::Unit::new_normalize(axis.clone()), angle));
+        // self.rotate calls rebuild_matrix
+    }
+
     fn rebuild_matrix(&mut self) {
-        let rot_m = na::Rotation3::from(self.rot).transpose();
+        let rot_m = na::Rotation3::from(self.rot);
         let tr_m = na::Translation3::new(self.pos.x, self.pos.y, self.pos.z);
         let rot_and_tr_m = tr_m * rot_m;
         self.m = rot_and_tr_m
@@ -102,6 +129,6 @@ impl Transform {
 
 impl Default for Transform {
     fn default() -> Self {
-        Transform::new(Vec3f::new(0.0, 0.0, 0.0), Vec3f::identity())
+        Transform::new(Vec3::new(0.0, 0.0, 0.0), UnitQuat::identity(), Vec3::from_element(1.0))
     }
 }

@@ -3,7 +3,7 @@ use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams, Player};
 use crate::components::{ModelSpec, ShaderStage};
 use crate::input::Input;
-use crate::math::Vec3f;
+use crate::math::{Vec3f,UnitQuatf};
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 
@@ -39,6 +39,7 @@ impl FreeBox {
         physics: &mut PhysicsWorld,
         assets: &Assets,
     ) -> (FreeBox, PhysicsBody, Transform, ModelSpec) {
+        let rot = UnitQuatf::identity();
         let scale = Vec3f::from_element(1.0);
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {
@@ -53,7 +54,7 @@ impl FreeBox {
         let modelspec = ModelSpec::new(String::from("cube.obj"), 
                                      vec![ShaderStage::Diffuse]
                        );
-        let transform = Transform::new(pos, scale);
+        let transform = Transform::new(pos, rot, scale);
         (FreeBox, physics_body, transform, modelspec)
     }
 }
