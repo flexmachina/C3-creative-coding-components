@@ -187,9 +187,6 @@ impl CameraController {
 
         self.v_rot_acc += self.rotate_vertical * self.sensitivity * dt;
 
-        log::error!("rotate_vertical: {}", self.rotate_vertical);
-        log::error!("rotate_horizontal: {}", self.rotate_horizontal);
-
         // // Protect from overturning - prevent camera from reaching the vertical line with small
         // // margin angles.
         if self.v_rot_acc + angle_to_top <= MIN_TOP_ANGLE {
