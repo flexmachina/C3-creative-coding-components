@@ -1,19 +1,19 @@
-use crate::maths::{Mat3, Mat4, UnitQuatf, Vec3f};
+use crate::maths::Mat3;
 
-use crate::model;
+use crate::{
+    model,
+    transform::Transform
+};
 
 pub struct Instance {
-    pub position: Vec3f,
-    pub rotation: UnitQuatf,
+    pub transform: Transform
 }
 
 impl Instance {
     pub fn to_raw(&self) -> InstanceRaw {
         InstanceRaw {
-            model: (Mat4::new_translation(&self.position)
-                * Mat4::from(self.rotation))
-            .into(),
-            normal: Mat3::from(self.rotation.to_rotation_matrix()).into(),
+            model: self.transform.matrix().into(),
+            normal: Mat3::from(self.transform.rotation().to_rotation_matrix()).into(),
         }
     }
 }

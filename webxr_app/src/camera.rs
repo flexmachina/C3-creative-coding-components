@@ -103,9 +103,6 @@ impl Projection {
     // the framebuffer has a flipped Y coordinate. We therefore:
     // 1. Pre-mutiply the projection matrix by FLIPY_MATRIX which inverts the y coordinate in clip space. 
     // 2. Invert the triangle winding order to CW (see create_render_pipeline() calls)
-    //
-    // Note the other WebXR coordinate system related conversion is reversing the 
-    // camera rotation direction in xr.rs
     pub fn matrix(&self) -> Mat4f {
         match self.webxr {
             true => FLIPY_MATRIX * self.perspective.as_matrix(),

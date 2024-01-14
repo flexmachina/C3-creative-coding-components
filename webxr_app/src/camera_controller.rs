@@ -204,7 +204,7 @@ impl CameraController {
         self.h_rot_acc -= h_rot;
 
         // The game world uses a right-hand coordinate system (where a positive angle
-        // is anti-clockwise), so negate the angles
+        // is anti-clockwise), so we negate the angles here
         transform.rotate_axis(&Vec3::y_axis(), -h_rot);
         transform.rotate_local_axis(&Vec3::x_axis(), -v_rot);
 
