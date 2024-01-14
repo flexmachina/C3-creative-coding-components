@@ -112,7 +112,7 @@ impl SkyboxPass {
 }
 
 impl SkyboxPass {
-    fn draw(
+    pub fn draw(
         &mut self,
         color_view: &wgpu::TextureView,
         device: &Device,
