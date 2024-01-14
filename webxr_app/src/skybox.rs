@@ -4,7 +4,7 @@ use crate::{
     camera::Camera,
     transform::Transform,
     light::Light,
-    maths::Mat4,
+    maths::{Mat4, Mat4f},
     node::Node,
     pass::Pass,
     Rect,
@@ -17,6 +17,10 @@ use crate::{
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct Uniform {
     view_proj_inv: [[f32; 4]; 4],
+}
+
+fn view_proj_skybox_inv(camera: &Camera, transform: &Transform) -> Mat4f {
+    camera.view_proj_skybox(transform).try_inverse().unwrap()
 }
 
 pub struct SkyboxPass {
@@ -129,7 +133,7 @@ impl Pass for SkyboxPass {
     ) -> wgpu::CommandBuffer {
 
         let uniform = Uniform { 
-            view_proj_inv: camera.0.view_proj_skybox(camera.1).try_inverse().unwrap().into()
+            view_proj_inv: view_proj_skybox_inv(camera.0, camera.1).into()
         };
 
         queue.write_buffer(

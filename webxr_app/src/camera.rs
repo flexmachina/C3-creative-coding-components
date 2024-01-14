@@ -23,13 +23,6 @@ pub const FLIPY_MATRIX: Mat4f = Mat4::new(
     0.0, 0.0, 0.0, 1.0,
 );
 
-#[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct CameraUniform {
-    view_position: [f32; 4],
-    view_proj: [[f32; 4]; 4],
-}
-
 #[derive(Debug)]
 pub struct Camera {
     pub projection: Projection,
@@ -41,13 +34,6 @@ impl Camera {
     ) -> Self {
         Self {
             projection
-        }
-    }
-
-    pub fn to_uniform(&self, transform: &Transform) -> CameraUniform {
-        CameraUniform {
-            view_position: transform.position().to_homogeneous().into(),
-            view_proj: self.view_proj(&transform).into()
         }
     }
     

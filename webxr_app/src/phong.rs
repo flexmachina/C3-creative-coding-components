@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use wgpu::{util::DeviceExt, BindGroupLayout, Device, Queue};
 
 use crate::{
-    camera::{Camera,CameraUniform},
+    camera::Camera,
     instance::{Instance, InstanceRaw},
     light::{Light, LightUniform},
     model::{self, DrawModel, Vertex},
@@ -14,6 +14,20 @@ use crate::{
     shader_utils,
     texture,
 };
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct CameraUniform {
+    view_position: [f32; 4],
+    view_proj: [[f32; 4]; 4],
+}
+
+pub fn to_uniform(camera: &Camera, transform: &Transform) -> CameraUniform {
+    CameraUniform {
+        view_position: transform.position().to_homogeneous().into(),
+        view_proj: camera.view_proj(&transform).into()
+    }
+}
 
 pub struct PhongConfig {
     pub wireframe: bool,
@@ -376,7 +390,7 @@ impl Pass for PhongPass {
         queue.write_buffer(
             &self.camera_buffer,
             0,
-            bytemuck::cast_slice(&[camera.0.to_uniform(camera.1)]),
+            bytemuck::cast_slice(&[to_uniform(camera.0, camera.1)]),
         );
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
