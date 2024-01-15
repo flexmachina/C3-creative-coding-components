@@ -26,15 +26,6 @@ pub type UnitQuat<T> = na::UnitQuaternion<T>;
 pub type UnitVec3<T> = na::UnitVector3<T>;
 
 
-
-#[rustfmt::skip]
-pub const OPENGL_TO_WGPU_MATRIX: Mat4f = Mat4f::new(
-    1.0, 0.0, 0.0, 0.0,
-    0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 0.5, 0.5,
-    0.0, 0.0, 0.0, 1.0,
-);
-
 // WTF, how else to cast?
 pub fn to_point(v3: Vec3f) -> Point3<Real> {
     Point3::origin().add(v3)

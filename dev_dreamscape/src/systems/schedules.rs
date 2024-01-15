@@ -30,11 +30,11 @@ pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
     let mut schedule = Schedule::default();
     schedule
         //.add_system(Assets::load.run_if(run_once()))
-        .add_system(prepare_render_pipelines.run_if(run_once()))
-        .add_system(Skybox::spawn.run_if(run_once()))
-        .add_system(FreeBox::spawn.run_if(run_once()))
-        .add_system(FloorBox::spawn.run_if(run_once()))
-        .add_system(Player::spawn.run_if(run_once()));
+        .add_systems(prepare_render_pipelines.run_if(run_once()))
+        .add_systems(Skybox::spawn.run_if(run_once()))
+        .add_systems(FreeBox::spawn.run_if(run_once()))
+        .add_systems(FloorBox::spawn.run_if(run_once()))
+        .add_systems(Player::spawn.run_if(run_once()));
         //.add_system(PlayerTarget::spawn.run_if(run_once()))
     (schedule, SpawnLabel)
 }
@@ -63,14 +63,14 @@ pub struct UpdateLabel;
 pub fn new_update_schedule() -> (Schedule, UpdateLabel) {
     let mut schedule = Schedule::default();
     schedule
-        .add_system(update_physics)
-        .add_system(PhysicsBody::sync.after(update_physics))
-        .add_system(Player::update.after(update_physics))
+        .add_systems(update_physics)
+        .add_systems(PhysicsBody::sync.after(update_physics))
+        .add_systems(Player::update.after(update_physics))
         //.add_system(PlayerTarget::update.after(Player::update))
         //.add_system(Grab::grab_or_release.after(Player::update))
         //.add_system(PhysicsBody::grab_start_stop.after(Player::update))
         //.add_system(PhysicsBody::update_grabbed.after(PhysicsBody::grab_start_stop))
-        .add_system(FreeBox::spawn_by_player.after(Player::update));
+        .add_systems(FreeBox::spawn_by_player.after(Player::update));
     (schedule, UpdateLabel)
 }
 
@@ -81,7 +81,7 @@ pub struct RenderLabel;
 pub fn new_render_schedule() -> (Schedule, RenderLabel) {
     let mut schedule = Schedule::default();
     schedule
-        .add_system(render);
+        .add_systems(render);
     (schedule, RenderLabel)
 }
 

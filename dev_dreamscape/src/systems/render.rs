@@ -1,5 +1,3 @@
-use std::borrow::BorrowMut;
-
 use crate::components::{Camera, Skybox, RenderOrder, Transform, Player, ModelSpec};
 use crate::mesh::Mesh;
 use crate::assets::{Assets,Renderers};
@@ -7,7 +5,7 @@ use crate::renderers::{SkyboxPass};
 
 use crate::device::Device;
 use bevy_ecs::prelude::*;
-use wgpu::{RenderBundle,TextureViewDescriptor};
+use wgpu::{TextureViewDescriptor};
 
 /*
 fn render_pass(
@@ -126,8 +124,6 @@ pub fn render(
     let surface = device.surface(); 
     let surface_texture = surface.get_current_texture().unwrap();
     let color_view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-    //if renderers.skybox_renderer.is_none() {return;}
 
     let skybox_renderer = renderers.skybox_renderer.as_mut().unwrap();
     let skybox_cmd_buffer = skybox_renderer.draw(
