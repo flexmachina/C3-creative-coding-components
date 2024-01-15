@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use crate::components::{Camera, Skybox, RenderOrder, Transform, Player, ModelSpec};
 use crate::mesh::Mesh;
 use crate::assets::{Assets,Renderers};
@@ -85,16 +87,11 @@ pub fn prepare_render_pipelines(
     assets: Res<Assets>,
     mut renderers: ResMut<Renderers>,
     mut commands: Commands,
-    player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
-    skybox_qry: Query<&Skybox>,
 ) {
-
     let webxr = false;
-    let skybox = skybox_qry.single();
     renderers.skybox_renderer = Some(SkyboxPass::new(
         &device,
         &assets,
-        &skybox,
         device.surface_texture_format(),
         webxr
     ))
@@ -114,39 +111,36 @@ pub fn prepare_render_pipelines(
     */
 }
 
-
-
-
 pub fn render(
     device: Res<Device>,
     assets: Res<Assets>,
-    renderers: ResMut<Renderers>,
+    mut renderers: ResMut<Renderers>,
     player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
     mut meshes_qry: Query<(&ModelSpec, &Transform, Option<&RenderOrder>)>,
-    mut skyboxes_qry: Query<(&Skybox, &Transform, Option<&RenderOrder>)>,
+    mut skyboxes_qry: Query<(&Skybox)>,
 ) {
 
     let player_cam = player_cam_qry.single();
     //let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
-
-    //TODO, to get skybox draw compiling I think I need to figure out into_inner, or as_ref or 
-    //maybe it's a matter of setting lifetimes like above function
     //new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a>
-    let (skybox, skybox_transform, skybox_renderorder) = skyboxes_qry.single();
     let surface = device.surface(); 
-    let color_texture = surface.get_current_texture().unwrap();
-    let color_view = color_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let surface_texture = surface.get_current_texture().unwrap();
+    let color_view = surface_texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let skybox_cmd_buffer = renderers.skybox_renderer.unwrap().draw(
+    //if renderers.skybox_renderer.is_none() {return;}
+
+    let skybox_renderer = renderers.skybox_renderer.as_mut().unwrap();
+    let skybox_cmd_buffer = skybox_renderer.draw(
         &color_view,
-        &device.into_inner(),
+        &device,
         player_cam,
         &None,
         true
     );
     ///////////////////////////////////////////////////////////
 
-    device.queue().submit([skybox_cmd_buffer]);
+    device.queue().submit([skybox_cmd_buffer]);    
+    surface_texture.present();
 
     /*
     let mut encoder = new_bundle_encoder(device, camera.0.target().as_ref());    

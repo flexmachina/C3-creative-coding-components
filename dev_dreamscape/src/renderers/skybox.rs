@@ -1,10 +1,10 @@
 use wgpu::util::DeviceExt;
 use crate::{
-    assets::{Assets}, 
-    components::{Skybox,Camera,Transform},
+    assets::Assets, 
+    components::{Camera,Transform},
     device::Device,
     math::{Mat4,Rect},
-    renderers::{shader_utils},
+    renderers::shader_utils,
     texture::Texture,
 };
 
@@ -30,7 +30,6 @@ impl SkyboxPass {
     pub fn new(
         device: &Device,
         assets: &Assets,
-        skybox_config: &Skybox,
         color_format: wgpu::TextureFormat,
         webxr: bool
     ) -> Self {
@@ -116,7 +115,7 @@ impl SkyboxPass {
         &mut self,
         color_view: &wgpu::TextureView,
         device: &Device,
-        camera: (&Camera, &Transform) ,
+        camera: (&Camera, &Transform),
         viewport: &Option<Rect>,
         clear_color: bool
     ) -> wgpu::CommandBuffer {
