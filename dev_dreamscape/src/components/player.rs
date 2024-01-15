@@ -167,10 +167,10 @@ impl Player {
         let h_rot = SPEED * dt * self.h_rot_acc;
         self.h_rot_acc -= h_rot;
 
-        //transform.rotate_around_axis(Vec3f::y_axis().xyz(), h_rot, TransformSpace::World);
-        //transform.rotate_around_axis(Vec3f::x_axis().xyz(), v_rot, TransformSpace::Local);
-        transform.rotate_axis(&Vec3f::y_axis().xyz(), h_rot);
-        transform.rotate_local_axis(&Vec3f::x_axis().xyz(), v_rot);
+        // The game world uses a right-hand coordinate system (where a positive angle
+        // is anti-clockwise), so we negate the angles here
+        transform.rotate_axis(&Vec3f::y_axis(), -h_rot);
+        transform.rotate_local_axis(&Vec3f::x_axis(), -v_rot);
     }
 }
 

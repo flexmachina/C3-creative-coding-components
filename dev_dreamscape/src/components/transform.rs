@@ -58,7 +58,7 @@ impl Transform {
     // Setters
 
     pub fn look_at(&mut self, target: Vec3f) {
-        self.rot = UnitQuat::look_at_rh(&(target - self.pos), &Vec3::y_axis());
+        self.rot = UnitQuat::face_towards(&(target - self.pos), &Vec3::y_axis()); 
         self.rebuild_matrix();
     }
 
@@ -105,15 +105,15 @@ impl Transform {
     
     // Rotate around the given global `axis` by `angle` (in radians).
     #[inline]
-    pub fn rotate_axis(&mut self, axis: &Vec3f, angle: f32) {
-        self.rotate(UnitQuat::from_axis_angle(&na::Unit::new_normalize(axis.clone()), angle));
+    pub fn rotate_axis(&mut self, axis: &UnitVec3f, angle: f32) {
+        self.rotate(UnitQuat::from_axis_angle(axis, angle));
         // self.rotate calls rebuild_matrix
     }
 
     // Rotate the local `axis` by `angle` (in radians).
     #[inline]
-    pub fn rotate_local_axis(&mut self, axis: &Vec3f, angle: f32) {
-        self.rotate_local(UnitQuat::from_axis_angle(&na::Unit::new_normalize(axis.clone()), angle));
+    pub fn rotate_local_axis(&mut self, axis: &UnitVec3f, angle: f32) {
+        self.rotate_local(UnitQuat::from_axis_angle(axis, angle));
         // self.rotate calls rebuild_matrix
     }
 
