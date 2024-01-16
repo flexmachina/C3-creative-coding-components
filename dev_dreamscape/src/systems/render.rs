@@ -1,11 +1,12 @@
-use crate::components::{Camera, Skybox, RenderOrder, Transform, Player, ModelSpec};
-use crate::mesh::Mesh;
+use std::collections::HashMap;
+
+use crate::components::{Camera, Skybox, Transform, Player, ModelSpec, Light, FloorBox};
 use crate::assets::{Assets,Renderers};
-use crate::renderers::{SkyboxPass};
+use crate::model::Model;
+use crate::renderers::{SkyboxPass, PhongConfig, PhongPass};
 
 use crate::device::Device;
 use bevy_ecs::prelude::*;
-use wgpu::{TextureViewDescriptor};
 
 /*
 fn render_pass(
@@ -92,7 +93,14 @@ pub fn prepare_render_pipelines(
         &assets,
         device.surface_texture_format(),
         webxr
-    ))
+    ));
+
+    renderers.phong_renderer = Some(PhongPass::new(
+        &PhongConfig { wireframe: false },
+        &device,
+        device.surface_texture_format(),
+        webxr
+    ));
 
     /*    
     //Leave as single pipeline to render skybox
@@ -113,12 +121,42 @@ pub fn render(
     device: Res<Device>,
     assets: Res<Assets>,
     mut renderers: ResMut<Renderers>,
-    player_cam_qry: Query<(&Camera, &Transform), With<Player>>,
-    mut meshes_qry: Query<(&ModelSpec, &Transform, Option<&RenderOrder>)>,
-    mut skyboxes_qry: Query<(&Skybox)>,
+    camera_qry: Query<(&Camera, &Transform), With<Player>>,
+    meshes_qry: Query<(&ModelSpec, &Transform)>,
+    light_qry: Query<(&Light, &Transform)>,
+    skyboxes_qry: Query<&Skybox>,
 ) {
+    let camera = camera_qry.single();
+    let light = light_qry.single();
 
-    let player_cam = player_cam_qry.single();
+    let mut nodes: Vec<(&Model, Vec<&Transform>)> = vec![];
+    for (modelspec, transform) in meshes_qry.iter() {
+        let model: &Model =  assets.model_store.get(&modelspec.modelname).unwrap();
+        nodes.push((model, vec![transform]));
+    }
+
+    /*
+    //
+    // Gather models to render
+    //
+    // Group by ModelSpec
+    // TODO use ModelSpec as key?
+    let mut instances: HashMap<&String, Vec<&Transform>> = HashMap::new();        
+    for (model_spec, transform) in meshes_qry.iter() {
+            instances.entry(&model_spec.modelname)
+                .or_insert_with(Vec::new)
+                .push(transform);                    
+    }
+
+    // Lookup Model from ModelSpec and flatten to vector
+    for (modelname, transforms) in instances.into_iter() {
+        let model =  assets.model_store.get(modelname).unwrap();
+        nodes.push((model, transforms));
+    }
+    */
+
+    ///////////////
+
     //let mut encoder = new_bundle_encoder(device.into_inner(), player_cam.0.target().as_ref());
     //new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a>
     let surface = device.surface(); 
@@ -129,13 +167,27 @@ pub fn render(
     let skybox_cmd_buffer = skybox_renderer.draw(
         &color_view,
         &device,
-        player_cam,
+        camera,
         &None,
         true
     );
     ///////////////////////////////////////////////////////////
+    let phong_renderer = renderers.phong_renderer.as_mut().unwrap();
+    let phong_cmd_buffer = phong_renderer.draw(
+        &color_view,
+        &device.depth_tex().view,
+        &device,
+        &device.queue(),
+        &nodes,
+        camera,
+        light,
+        &None, 
+        false, 
+        true,
+    );
 
-    device.queue().submit([skybox_cmd_buffer]);    
+
+    device.queue().submit([skybox_cmd_buffer, phong_cmd_buffer]);    
     surface_texture.present();
 
     /*

@@ -10,17 +10,15 @@ use crate::systems::{
         render,
         prepare_render_pipelines,
 };
-use crate::assets::Assets;
 use crate::components::{
     FloorBox, 
-    FreeBox, 
+    FreeBox,
+    Light, 
     Player, 
     Skybox, 
     //PlayerTarget
 };
-use crate::components::{
-    PhysicsBody, 
-};
+use crate::components::PhysicsBody;
 
 
 #[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -34,7 +32,8 @@ pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
         .add_systems(Skybox::spawn.run_if(run_once()))
         .add_systems(FreeBox::spawn.run_if(run_once()))
         .add_systems(FloorBox::spawn.run_if(run_once()))
-        .add_systems(Player::spawn.run_if(run_once()));
+        .add_systems(Player::spawn.run_if(run_once()))
+        .add_systems(Light::spawn.run_if(run_once()));
         //.add_system(PlayerTarget::spawn.run_if(run_once()))
     (schedule, SpawnLabel)
 }

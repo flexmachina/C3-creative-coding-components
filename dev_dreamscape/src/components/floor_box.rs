@@ -3,7 +3,6 @@ use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams};
 use crate::components::{ModelSpec, ShaderStage};
 use crate::math::{Vec3f,UnitQuatf};
-use crate::mesh::Mesh;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 
@@ -34,6 +33,6 @@ impl FloorBox {
             &mut physics,
         );
 
-        commands.spawn((FloorBox, physics_body, transform, modelspec));
-    }
+        commands.spawn((FloorBox, modelspec, physics_body, transform));
+    }   
 }

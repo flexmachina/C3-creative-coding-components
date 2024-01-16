@@ -8,7 +8,7 @@ use crate::events::{KeyboardEvent, WindowResizeEvent};
 use crate::physics_world::PhysicsWorld;
 use crate::app::AppState;
 use bevy_ecs::prelude::*;
-use winit::event::{VirtualKeyCode};
+use winit::event::VirtualKeyCode;
 
 pub use render::{render,prepare_render_pipelines};
 pub use update_input_state::update_input_state;

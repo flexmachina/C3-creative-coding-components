@@ -1,8 +1,6 @@
 use anyhow::*;
-use std::path::PathBuf;
-use bevy_ecs::prelude::{Commands, Res, Resource};
+use bevy_ecs::prelude::Resource;
 use cfg_if::cfg_if;
-
 
 use wgpu::util::DeviceExt;
 use std::io::{BufReader, Cursor};
@@ -12,8 +10,8 @@ use crate::device::Device;
 use crate::{model, texture};
 use crate::math::{Vec2, Vec3};
 
-use crate::logging::{printlog};
-use crate::renderers::{SkyboxPass};
+use crate::logging::printlog;
+use crate::renderers::{PhongPass, SkyboxPass};
 
 
 #[cfg(target_arch = "wasm32")]
@@ -290,13 +288,15 @@ impl Assets {
 #[derive(Resource)]
 pub struct Renderers {
     pub skybox_renderer: Option<SkyboxPass>,
+    pub phong_renderer: Option<PhongPass>,
 }
 
 impl Renderers {
     pub fn init(device: &Device) -> Self {
         printlog("In assets.load_and_return");
-        Self {skybox_renderer: None}
+        Self {
+            skybox_renderer: None, 
+            phong_renderer: None
+        }
     }
 }
-
-

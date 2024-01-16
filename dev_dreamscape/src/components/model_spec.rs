@@ -1,6 +1,5 @@
 use bevy_ecs::prelude::*;
 
-use crate::{model};
 
 pub enum ShaderStage {
     /*
@@ -12,8 +11,8 @@ pub enum ShaderStage {
 
 #[derive(Component)]
 pub struct ModelSpec {
-    modelname: String,
-    shaderstages: Vec<ShaderStage>
+    pub modelname: String,
+    pub shaderstages: Vec<ShaderStage>
 }
 
 impl ModelSpec {
