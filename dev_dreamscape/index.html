@@ -5,7 +5,10 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn WGPU</title>
+    <meta name='mobile-web-app-capable' content='yes'>
+    <meta name='apple-mobile-web-app-capable' content='yes'>
+
+    <title>Dreamscape</title>
     <style>
         canvas {
             background-color: black;
@@ -14,13 +17,22 @@
 </head>
 
 <body id="wasm-example">
-  <script type="module">
-      import init from "./pkg/dev_dreamscape.js"
-      init().then(() => {
-          console.log("WASM Loaded")
-      })
-  </script>
+    <script type="module" defer>
+        import init from "./pkg/dev_dreamscape.js";
+        const not_metaquest = navigator.userAgent.indexOf("OculusBrowser") === -1;
+        if (not_metaquest) {
+            // Start WASM immediately and enter XR immersive mode
+            init();
+        } else {
+            // TODO: make a nicer UI like the WebXR samples.
+            // Entering XR immersive mode on Meta Quest Browser requires
+            // user interaction, so start the WASM on a button press
+            var button = document.createElement('button');
+            button.innerHTML = 'Enter XR';
+            button.onclick = () => init();
+            document.body.appendChild(button);
+        }
+    </script>
 </body>
 
 </html>
-
