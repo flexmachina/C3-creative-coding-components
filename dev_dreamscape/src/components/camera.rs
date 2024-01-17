@@ -46,16 +46,6 @@ impl Camera {
         // OPENGL_TO_WGPU_MATRIX * 
         self.projection_matrix() * self.view_matrix(&transform)
     }
-    
-    // TODO: pass in transform as a parameter when using ECS
-    pub fn view_proj_skybox(&self, transform: &Transform) -> Mat4f {
-        // Skybox needs view mat at origin
-        let t_at_origin = Transform::new(Vec3::zeros(), transform.rotation(), transform.scale());
-        // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
-        // skybox rendering.
-        //OPENGL_TO_WGPU_MATRIX *
-        self.projection_matrix() * t_at_origin.matrix().try_inverse().unwrap()
-    }
 
     pub fn view_matrix(&self, transform: &Transform) -> Mat4f {
         transform.matrix().try_inverse().unwrap()
@@ -71,6 +61,14 @@ impl Camera {
         match self.webxr {
             true => FLIPY_MATRIX * self.perspective.as_matrix(),
             false => self.perspective.as_matrix().clone()
+        }
+    }
+
+    // Perspective3.inverse is faster than general matrix inverse
+    pub fn inv_projection_matrix(&self) -> Mat4f {
+        match self.webxr {
+            true => self.perspective.inverse() * FLIPY_MATRIX, // assumes FLIPY_MATRIX is it's own inverse
+            false => self.perspective.inverse().clone()
         }
     }
 

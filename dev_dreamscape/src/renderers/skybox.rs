@@ -118,10 +118,14 @@ impl SkyboxPass {
         clear_color: bool
     ) -> wgpu::CommandBuffer {
 
-        let view_proj = camera.0.view_proj_skybox(camera.1);
-
+        // Compute matrix that goes from screen space (fullscreen quad coordinate) to direction in world space,
+        // for sampling the cubemap texture.
+        // Use inverse of view matrix (i.e. the camera matrix), without translation.
+        let mut view_inv = camera.1.matrix();
+        view_inv.append_translation_mut(&-camera.1.position()); // set translation to 0
+        let view_proj_inv = view_inv * camera.0.inv_projection_matrix();
         let uniform = Uniform { 
-            view_proj_inv: view_proj.try_inverse().unwrap().into()
+            view_proj_inv: view_proj_inv.into()
         };
 
         device.queue().write_buffer(
