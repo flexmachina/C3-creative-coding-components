@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use crate::components::camera::{Camera,Projection};
+use crate::components::camera::Camera;
 use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
 use crate::events::WindowResizeEvent;
@@ -34,9 +34,9 @@ impl Player {
         let webxr = false;
 
         let camera = Camera::new(
-            Projection::new(device.surface_size().width as u32,
-                            device.surface_size().height as u32, 
-                            fov, znear, zfar, webxr)
+            device.surface_size().width as u32,
+            device.surface_size().height as u32, 
+            fov, znear, zfar, webxr
         );
         let mut transform = Transform::from_position(pos);
         transform.look_at(Vec3f::from_element(0.0));
@@ -195,7 +195,7 @@ fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
 
 fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, device: &Device) {
     //camera.Projection.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);
-    camera.projection.resize(new_surface_size.width as u32 , new_surface_size.height as u32);
+    camera.resize(new_surface_size.width as u32 , new_surface_size.height as u32);
     //TODO handle camera resize!
     /*
     if let Some(target) = camera.target_mut() {

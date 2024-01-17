@@ -11,7 +11,7 @@ mod skybox;
 mod transform;
 //mod grab;
 
-pub use camera::{Camera,Projection};
+pub use camera::Camera;
 pub use floor_box::FloorBox;
 pub use free_box::FreeBox;
 pub use light::Light;

@@ -25,15 +25,15 @@ pub const FLIPY_MATRIX: Mat4f = Mat4::new(
 
 #[derive(Debug,Component)]
 pub struct Camera {
-    pub projection: Projection,
+    perspective: na::Perspective3<f32>,
+    webxr: bool
 }
 
 impl Camera {
-    pub fn new(
-        projection: Projection,
-    ) -> Self {
+    pub fn new(width: u32, height: u32, fovy: f32, znear: f32, zfar: f32, webxr: bool) -> Self {
         Self {
-            projection
+            perspective: na::Perspective3::new(width as f32 / height as f32, fovy, znear, zfar),
+            webxr
         }
     }
     
@@ -44,7 +44,7 @@ impl Camera {
         // Note: We don't explicitly need the OPENGL_TO_WGPU_MATRIX, but models centered on (0, 0, 0) will be 
         // halfway inside the clipping area when the camera matrix is identity.
         // OPENGL_TO_WGPU_MATRIX * 
-        self.projection.matrix() * self.view_matrix(&transform)
+        self.projection_matrix() * self.view_matrix(&transform)
     }
     
     // TODO: pass in transform as a parameter when using ECS
@@ -54,30 +54,11 @@ impl Camera {
         // Removed premultiply by OPENGL_TO_WGPU_MATRIX as it messes up the
         // skybox rendering.
         //OPENGL_TO_WGPU_MATRIX *
-        self.projection.matrix() * t_at_origin.matrix().try_inverse().unwrap()
+        self.projection_matrix() * t_at_origin.matrix().try_inverse().unwrap()
     }
 
     pub fn view_matrix(&self, transform: &Transform) -> Mat4f {
         transform.matrix().try_inverse().unwrap()
-    }
-}
-
-#[derive(Debug)]
-pub struct Projection {
-    perspective: na::Perspective3<f32>,
-    webxr: bool
-}
-
-impl Projection {
-    pub fn new(width: u32, height: u32, fovy: f32, znear: f32, zfar: f32, webxr: bool) -> Self {
-        Self {
-            perspective: na::Perspective3::new(width as f32 / height as f32, fovy, znear, zfar),
-            webxr
-        }
-    }
-
-    pub fn resize(&mut self, width: u32, height: u32) {
-        self.perspective.set_aspect(width as f32 / height as f32);
     }
 
     // Dealing with the WebXR coordinate system needs to be taken with care as there are a few complications that
@@ -86,7 +67,7 @@ impl Projection {
     // the framebuffer has a flipped Y coordinate. We therefore:
     // 1. Pre-mutiply the projection matrix by FLIPY_MATRIX which inverts the y coordinate in clip space. 
     // 2. Invert the triangle winding order to CW (see create_render_pipeline() calls)
-    pub fn matrix(&self) -> Mat4f {
+    pub fn projection_matrix(&self) -> Mat4f {
         match self.webxr {
             true => FLIPY_MATRIX * self.perspective.as_matrix(),
             false => self.perspective.as_matrix().clone()
@@ -99,7 +80,11 @@ impl Projection {
     // potentially be non-standard projection matrices (e.g. with shear),
     // https://github.com/immersive-web/webxr/issues/461
     #[allow(dead_code)]
-    pub fn set_matrix(&mut self, matrix: Mat4f) {
+    pub fn set_projection_matrix(&mut self, matrix: Mat4f) {
         self.perspective = na::Perspective3::from_matrix_unchecked(matrix);
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        self.perspective.set_aspect(width as f32 / height as f32);
     }
 }
