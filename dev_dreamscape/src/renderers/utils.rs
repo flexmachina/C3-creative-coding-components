@@ -1,6 +1,6 @@
 // From https://github.com/MeetKai/superconductor/blob/3ed64c119e5e7419752e5602fe5d8868d5e503cf/renderer-core/src/lib.rs
 // TODO: check below cfg usage is needed
-//#[cfg(feature = "webgl")]
+#[cfg(feature = "webgl")]
 pub fn create_view_from_device_framebuffer(
     device: &wgpu::Device,
     framebuffer: web_sys::WebGlFramebuffer,
