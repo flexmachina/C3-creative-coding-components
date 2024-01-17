@@ -18,9 +18,6 @@ pub struct Device {
 }
 
 impl Device {
-    // TODO Configurable?
-    const DEPTH_TEX_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
-
     pub async fn new(window: &winit::window::Window) -> Self {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::all(),
@@ -80,7 +77,6 @@ impl Device {
         };
         surface.configure(&device, &surface_config);
 
-        //let depth_tex = Texture::new_depth(&device, Self::DEPTH_TEX_FORMAT, surface_size.into());
         let depth_tex = Texture::create_depth_texture(&device, 
                             surface_size.width, surface_size.height, "depth_texture");
 
@@ -107,10 +103,6 @@ impl Device {
 
     pub fn surface_texture_format(&self) -> wgpu::TextureFormat {
         self.surface_config.format
-    }
-
-    pub fn depth_texture_format(&self) -> wgpu::TextureFormat {
-        Self::DEPTH_TEX_FORMAT
     }
 
     pub fn surface_size(&self) -> SurfaceSize {

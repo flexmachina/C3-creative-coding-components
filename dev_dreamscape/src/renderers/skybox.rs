@@ -23,7 +23,6 @@ pub struct SkyboxPass {
     texture_bind_group: wgpu::BindGroup,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
-    webxr: bool,
 }
 
 impl SkyboxPass {
@@ -105,7 +104,6 @@ impl SkyboxPass {
             texture_bind_group,
             uniform_buffer,
             uniform_bind_group,
-            webxr,
         }
     }
 }
@@ -120,13 +118,6 @@ impl SkyboxPass {
         clear_color: bool
     ) -> wgpu::CommandBuffer {
 
-        /*
-        let view_proj = if self.webxr {
-            camera.xr_camera.view_proj_skybox()
-        } else {
-            camera.view_proj_skybox()
-        };
-        */
         let view_proj = camera.0.view_proj_skybox(camera.1);
 
         let uniform = Uniform { 
