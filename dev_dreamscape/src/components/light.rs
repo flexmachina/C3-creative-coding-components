@@ -10,8 +10,6 @@ pub struct Light {
     pub color: Vec3f,
 }
 
-
-
 impl Light {
     pub fn spawn(mut commands: Commands, assets: Res<Assets>) {
         commands.spawn((

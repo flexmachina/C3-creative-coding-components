@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::ops::Add;
 use rapier3d::na;
 use rapier3d::prelude::Real;

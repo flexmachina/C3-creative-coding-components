@@ -1,7 +1,7 @@
 use crate::assets::Assets;
 use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams, Player};
-use crate::components::{ModelSpec, ShaderStage};
+use crate::components::ModelSpec;
 use crate::input::Input;
 use crate::math::{Vec3f,UnitQuatf};
 use crate::physics_world::PhysicsWorld;
@@ -51,9 +51,7 @@ impl FreeBox {
             },
             physics,
         );
-        let modelspec = ModelSpec::new(String::from("cube.obj"), 
-                                     vec![ShaderStage::Diffuse]
-                       );
+        let modelspec = ModelSpec::new(String::from("cube.obj"));
         let transform = Transform::new(pos, rot, scale);
         (FreeBox, physics_body, transform, modelspec)
     }
