@@ -62,7 +62,8 @@ pub struct PhongPass {
     pub camera_buffer: wgpu::Buffer,
     pub light_buffer: wgpu::Buffer,
     // Instances
-    instance_buffers: HashMap<usize, wgpu::Buffer>,
+    //instance_buffers: HashMap<usize, wgpu::Buffer>,
+    instance_buffer: wgpu::Buffer,
     // Phong pipeline
     pub phong_global_bind_group_layout: BindGroupLayout,
     pub phong_global_bind_group: wgpu::BindGroup,
@@ -367,13 +368,20 @@ impl PhongPass {
                 multiview: None,
             })
         };
-        // Create instance buffer
-        let instance_buffers = HashMap::new();
+
+         // Create instance buffer initially for a single transform
+         // This will be resized if needed in draw()
+        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Instance Buffer"),
+            size: std::mem::size_of::<InstanceRaw>() as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false
+        });
 
         PhongPass {
             camera_buffer,
             light_buffer,
-            instance_buffers,
+            instance_buffer,
 
             phong_global_bind_group_layout,
             phong_global_bind_group,
@@ -454,6 +462,7 @@ impl PhongPass {
             // This is separate loop from the render because of Rust ownership
             // (can prob wrap in block instead to limit mutable use)
 
+            let mut max_num_tansforms = 0;
             for (model_index, node) in nodes.iter().enumerate() {
                 let (model, transforms) = node;
                 // We create a bind group for each model's local uniform data
@@ -481,25 +490,19 @@ impl PhongPass {
                             ],
                         })
                     });
+                
+                max_num_tansforms = std::cmp::max(max_num_tansforms, transforms.len());
+            }
 
-                // Setup instance buffer for the model
-                // similar process as above using HashMap
-                self.instance_buffers.entry(model_index).or_insert_with(|| {
-                    // We condense the matrix properties into a flat array (aka "raw data")
-                    // (which is how buffers work - so we can "stride" over chunks)
-                    let instance_data = transforms
-                        .iter()
-                        .map(instance::instance_raw)
-                        .collect::<Vec<_>>();
-                    // Create the instance buffer with our data
-                    let instance_buffer =
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Instance Buffer"),
-                            contents: bytemuck::cast_slice(&instance_data),
-                            usage: wgpu::BufferUsages::VERTEX,
-                        });
-
-                    instance_buffer
+            // Resize instance buffer if needed
+            let required_instance_buffer_size = (max_num_tansforms * std::mem::size_of::<InstanceRaw>()) as u64;
+            if self.instance_buffer.size() < required_instance_buffer_size as u64 {
+                // Reallocate global instance buffer
+                self.instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Instance Buffer"),
+                    size: required_instance_buffer_size,
+                    usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false
                 });
             }
 
@@ -517,7 +520,15 @@ impl PhongPass {
             // Render/draw all nodes/models
             for (model_index, node) in nodes.iter().enumerate() {
                 let (model, transforms) = node;
-                render_pass.set_vertex_buffer(1, self.instance_buffers[&model_index].slice(..));
+
+                let instance_data = transforms.iter().map(instance::instance_raw).collect::<Vec<_>>();
+                queue.write_buffer(
+                    &self.instance_buffer,
+                    0,
+                    bytemuck::cast_slice(&instance_data),
+                );
+
+                render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
                 render_pass.set_bind_group(1, &self.phong_local_bind_groups[&model_index], &[]);
                 // Draw all the model instances
                 render_pass.draw_model_instanced(

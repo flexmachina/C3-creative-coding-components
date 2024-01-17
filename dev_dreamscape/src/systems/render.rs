@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::components::{Camera, Skybox, Transform, Player, ModelSpec, Light, FloorBox};
+use crate::components::{Camera, Skybox, Transform, Player, ModelSpec, Light};
 use crate::assets::{Assets,Renderers};
 use crate::model::Model;
 use crate::renderers::{SkyboxPass, PhongConfig, PhongPass};
@@ -130,12 +130,12 @@ pub fn render(
     let light = light_qry.single();
 
     let mut nodes: Vec<(&Model, Vec<&Transform>)> = vec![];
-    for (modelspec, transform) in meshes_qry.iter() {
-        let model: &Model =  assets.model_store.get(&modelspec.modelname).unwrap();
-        nodes.push((model, vec![transform]));
-    }
+  
+    // for (modelspec, transform) in meshes_qry.iter() {
+    //     let model: &Model =  assets.model_store.get(&modelspec.modelname).unwrap();
+    //     nodes.push((model, vec![transform]));
+    // }
 
-    /*
     //
     // Gather models to render
     //
@@ -153,7 +153,6 @@ pub fn render(
         let model =  assets.model_store.get(modelname).unwrap();
         nodes.push((model, transforms));
     }
-    */
 
     ///////////////
 
