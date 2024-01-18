@@ -1,5 +1,5 @@
 use crate::device::{Device, SurfaceSize};
-use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent};
+use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent, FrameTimeEvent};
 use crate::frame_time::FrameTime;
 use crate::input::Input;
 use crate::physics_world::PhysicsWorld;
@@ -25,20 +25,13 @@ pub struct AppState {
     pub webxr: bool
 }
 
-pub struct Experience {
-    pub window: Window,
-    pub world: World,
-}
-
 pub struct App {
-    pub experience: Rc<RefCell<Experience>>,
-    #[cfg(target_arch = "wasm32")]
-    #[allow(dead_code)]
-    xr_app: Option<XrApp>,
+    pub world: World,
+    pub world_systemstate: Rc<RefCell<SystemState>>,
 }
 
 
-impl Experience {
+impl App {
     pub async fn new(window: Window, webxr: bool) -> Self {
 
         let mut world = World::default();
@@ -53,6 +46,7 @@ impl Experience {
 
         printlog("running init_app - created window");
 
+        /*
         #[cfg(target_arch = "wasm32")]
         {
             // Winit prevents sizing with CSS, so we have to set
@@ -71,6 +65,7 @@ impl Experience {
                 })
                 .expect("Couldn't append canvas to document body.");
         }
+         */
 
         //let device = pollster::block_on(async {
         //    Device::new(&window).await
@@ -91,8 +86,9 @@ impl Experience {
         world.init_resource::<Events<WindowResizeEvent>>();
         world.init_resource::<Events<KeyboardEvent>>();
         world.init_resource::<Events<MouseEvent>>();
+        world.init_resource::<Events<FrameTimeEvent>>();
 
-        world.insert_non_send_resource(event_loop);
+        //world.insert_non_send_resource(event_loop);
         world.insert_non_send_resource(window);
 
         world.insert_resource(AppState {
@@ -107,6 +103,16 @@ impl Experience {
         world.insert_resource(FrameTime::new());
         world.insert_resource(Input::new());
         world.insert_resource(PhysicsWorld::new());
+
+        let mut world_systemstate: SystemState<(
+            NonSend<Window>,
+            //NonSendMut<EventLoop<()>>,
+            ResMut<Input>,
+            EventWriter<WindowResizeEvent>,
+            EventWriter<KeyboardEvent>,
+            EventWriter<MouseEvent>,
+            EventWriter<FrameTimeEvent>,
+        )> = SystemState::from_world(&mut world);
 
 
         let spawn_scene_schedule = new_spawn_scene_schedule();
@@ -123,19 +129,102 @@ impl Experience {
             world,
         }
     }
+
+    #[allow(dead_code)]
+    fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
+        //TODO Do this via event 
+        //self.scene.camera_transform.set_pose(pos, rot);
+        //self.scene.camera.projection.set_matrix(projection_matrix);
+    }
+
+    fn update_scene(&mut self, dt: std::time::Duration) {
+        //TODO need to set the time via event
+        world.run_schedule(spawn_scene_schedule.1);
+        world.run_schedule(preupdate_schedule.1);
+        world.run_schedule(update_schedule.1);
+    }
+
+    fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
+                         viewport: Option<Rect>, clear: bool) {
+        //TODO access renderers and run returned command buffers
+
+        //basically access the skybox and phong renderers and get the command buffers
+        /*
+        let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let depth_view = match depth_texture {
+            Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
+            _ => self.render_state.depth_texture.texture.create_view(&wgpu::TextureViewDescriptor::default())
+        };
+        let command_buffer1 = self.render_state.skybox_pass.draw(
+            &color_view,
+            &depth_view,
+            &self.render_state.device,
+            &self.render_state.queue,
+            &self.scene.nodes,
+            (&self.scene.camera, &self.scene.camera_transform),
+            &self.scene.light,
+            &viewport,
+            clear,
+            clear,
+        );
+        
+        let command_buffer2 = self.render_state.phong_pass.draw(
+            &color_view,
+            &depth_view,
+            &self.render_state.device,
+            &self.render_state.queue,
+            &self.scene.nodes,
+            (&self.scene.camera, &self.scene.camera_transform),
+            &self.scene.light,
+            &viewport,
+            false,
+            clear);
+
+            // submit will accept anything that implements IntoIter
+            self.render_state.queue.submit([command_buffer1, command_buffer2]);
+        */
+    }
+
 }
 
 
 
 
+pub struct Experience {
+    pub app: Rc<RefCell<App>>,
+    #[cfg(target_arch = "wasm32")]
+    #[allow(dead_code)]
+    xr_app: Option<XrApp>,
+}
+
+impl Experience {
+    async fn new(window: Window, webxr: bool) -> Self {
+        // App::new uses async code, so we're going to wait for it to finish
+        let app = App::new(window, webxr).await;
+        let app = Rc::new(RefCell::new(app));
+        #[cfg(target_arch = "wasm32")]
+        {
+            let xr_app = if webxr {
+                let xr_app = XrApp::new(app.clone());
+                xr_app.init().await;
+                Some(xr_app)
+            } else {
+                None
+            };
+            Self{app, xr_app}
+        }        
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            Self{app}
+        }
+    }
+}
 
 
-
-pub async fn run_app() {
+pub async fn run_experience(webxr: bool) {
 
     init_logging();
     printlog("running run_app - starting");
-
 
     let event_loop = EventLoop::new();
     printlog("running init_app - created event_loop");
@@ -146,6 +235,29 @@ pub async fn run_app() {
         .build(&event_loop)
         .unwrap();
 
+    #[cfg(target_arch = "wasm32")]
+    {
+        // Winit prevents sizing with CSS, so we have to set
+        // the size manually when on web.
+        use winit::dpi::PhysicalSize;
+        window.set_inner_size(PhysicalSize::new(450, 400));
+
+        use winit::platform::web::WindowExtWebSys;
+        web_sys::window()
+            .and_then(|win| win.document())
+            .and_then(|doc| {
+                let dst = doc.get_element_by_id("wasm-example")?;
+                let canvas = web_sys::Element::from(window.canvas());
+                dst.append_child(&canvas).ok()?;
+                Some(())
+            })
+            .expect("Couldn't append canvas to document body.");
+    }
+    printlog("running init_app - created window");
+
+
+    let experience = Experience::new(window, webxr).await;
+    printlog("running init_app - created experience");
 
     let mut handle_events_system_state: SystemState<(
         NonSend<Window>,
@@ -156,9 +268,13 @@ pub async fn run_app() {
         EventWriter<MouseEvent>,
     )> = SystemState::from_world(&mut world);
 
+    //Not sure why this was done? Adding event_loop resource and then removing it again
+    //I don't think is needed anymore
+    /*
     let mut event_loop = world
         .remove_non_send_resource::<EventLoop<()>>()
         .unwrap();
+    */
 
     let event_handler = move |event: Event<()> , _: &EventLoopWindowTarget<()>, 
                              control_flow: &mut ControlFlow| {
@@ -247,7 +363,6 @@ pub async fn run_app() {
 
             _ => {}
         }
-
 
         if !world.resource::<AppState>().running {
             *control_flow = ControlFlow::Exit;

@@ -18,3 +18,9 @@ pub enum MouseEvent {
     Move(f32, f32),
     Button { button: MouseButton, pressed: bool },
 }
+
+
+#[derive(Event)]
+pub struct FrameTimeEvent {
+    pub duration: std::time::Duration
+}

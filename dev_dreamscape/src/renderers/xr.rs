@@ -65,17 +65,17 @@ pub struct XrApp {
     session: Rc<RefCell<Option<XrSession>>>,
     ref_space: Rc<RefCell<Option<XrReferenceSpace>>>,
     gl: Rc<WebGl2RenderingContext>,
-    state: Rc<RefCell<crate::State>>,
+    app: Rc<RefCell<crate::app::App>>,
 }
 
 impl XrApp {
-    pub fn new(state: Rc<RefCell<crate::State>>) -> Self {
+    pub fn new(app: Rc<RefCell<crate::app::App>>) -> Self {
 
         let session = Rc::new(RefCell::new(None));
         let ref_space = Rc::new(RefCell::new(None));
         let xr_mode = true;
         let gl = Rc::new(create_webgl_context(xr_mode).unwrap());
-        Self { session, ref_space, gl, state: state.clone() }
+        Self { session, ref_space, gl, app: app.clone() }
     }
 
     pub async fn init(&self) {
@@ -123,14 +123,14 @@ impl XrApp {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let state = self.state.clone();
+        let app = self.app.clone();
         let gl = self.gl.clone();
         let ref_space = self.ref_space.clone();
         let last_frame_time = Rc::new(RefCell::new(0.));
 
         *g.borrow_mut() = Some(Closure::new(move | time: f64, frame: XrFrame| {
             let sess: XrSession = frame.session();
-            let mut state = state.borrow_mut();
+            let mut app = app.borrow_mut();
             let ref_space = ref_space.borrow_mut();
             let ref_space = ref_space.as_ref().unwrap();
 
@@ -183,18 +183,18 @@ impl XrApp {
                 let rotation = UnitQuat::new_normalize(rotation);
 
                 // Callback
-                state.update_camera(position, rotation, to_mat(&view.projection_matrix()));
+                app.update_camera(position, rotation, to_mat(&view.projection_matrix()));
 
                 let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
                 last_frame_time.replace(time);
                 // Callback
-                state.update_scene(delta_time);
+                app.update_scene(delta_time);
 
                 // Each view is rendered to a different region of the same framebuffer,
                 // so only clear the framebuffer once before the first render pass.
                 let clear = view_idx == 0;
                 // Callback
-                state.render_to_texture(&color_texture, Some(&depth_texture), Some(vp), clear);
+                app.render_to_texture(&color_texture, Some(&depth_texture), Some(vp), clear);
             }
 
             // Schedule ourself for another requestAnimationFrame callback.
