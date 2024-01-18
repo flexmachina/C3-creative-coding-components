@@ -21,12 +21,12 @@ pub fn resize_device(mut device: ResMut<Device>, mut events: EventReader<WindowR
     if let Some(e) = events.iter().last() { device.resize(e.new_size) }
 }
 
-pub fn escape_on_exit(mut app: ResMut<AppState>, mut keyboard_events: EventReader<KeyboardEvent>) {
+pub fn escape_on_exit(mut appstate: ResMut<AppState>, mut keyboard_events: EventReader<KeyboardEvent>) {
     if keyboard_events
         .iter()
         .any(|e| e.code == VirtualKeyCode::Escape && e.pressed)
     {
-        app.running = false;
+        appstate.running = false;
     }
 }
 

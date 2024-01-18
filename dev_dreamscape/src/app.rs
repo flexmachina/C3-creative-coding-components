@@ -15,92 +15,115 @@ use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent}
 
 use crate::systems::*;
 use crate::assets::{Assets, Renderers};
+use crate::renderers::{XrApp};
 use crate::logging::{init_logging, printlog};
 
-/*
-pub struct App {
-    pub world: World,
-    pub loop: EventLoop,
+
+#[derive(Resource)]
+pub struct AppState {
+    pub running: bool,
+    pub webxr: bool
+}
+
+pub struct Experience {
     pub window: Window,
-    pub device: Device
+    pub world: World,
 }
-*/
 
-
-pub async fn init_app(world: &mut World) {
-    println!("running init_app - started");
-    printlog("running init_app - created logger");
-
-    let event_loop = EventLoop::new();
-    printlog("running init_app - created event_loop");
-    
-    let window = WindowBuilder::new()
-        .with_title("Demo")
-        .with_inner_size(SurfaceSize::new(1900, 1200))
-        .build(&event_loop)
-        .unwrap();
- 
-    printlog("running init_app - created window");
-
+pub struct App {
+    pub experience: Rc<RefCell<Experience>>,
     #[cfg(target_arch = "wasm32")]
-    {
-        // Winit prevents sizing with CSS, so we have to set
-        // the size manually when on web.
-        use winit::dpi::PhysicalSize;
-        window.set_inner_size(PhysicalSize::new(450, 400));
-        
-        use winit::platform::web::WindowExtWebSys;
-        web_sys::window()
-            .and_then(|win| win.document())
-            .and_then(|doc| {
-                let dst = doc.get_element_by_id("wasm-example")?;
-                let canvas = web_sys::Element::from(window.canvas());
-                dst.append_child(&canvas).ok()?;
-                Some(())
-            })
-            .expect("Couldn't append canvas to document body.");
-    }
-
-    //let device = pollster::block_on(async {
-    //    Device::new(&window).await
-    //});
-    let device = Device::new(&window).await;
-
-    printlog("running init_app - loading assets outside schedule");
-    //let assets = Assets::load_and_return(&device);
-    let assets = Assets::load_and_return(&device).await;
-    /*
-    let assets = pollster::block_on(async {
-        Assets::load_and_return(&device).await
-    });
-    */
-    let renderers = Renderers::init(&device);
-
-    printlog("running init_app - done loading assets outside schedule");
-
-
-    world.init_resource::<Events<WindowResizeEvent>>();
-    world.init_resource::<Events<KeyboardEvent>>();
-    world.init_resource::<Events<MouseEvent>>();
-
-    world.insert_non_send_resource(event_loop);
-    world.insert_non_send_resource(window);
-
-    world.insert_resource(AppState {
-        running: true,
-    });
-    world.insert_resource(device);
-    world.insert_resource(assets);
-
-    //NOTE not sure if this ok as just init_resource
-    world.insert_resource(renderers);
-    world.insert_resource(FrameTime::new());
-    world.insert_resource(Input::new());
-    world.insert_resource(PhysicsWorld::new());
-
-
+    #[allow(dead_code)]
+    xr_app: Option<XrApp>,
 }
 
+
+impl Experience {
+    pub async fn new(window: Window, webxr: bool) -> Self {
+
+        let mut world = World::default();
+        world.init_resource::<Schedules>();
+
+        printlog("running run_app - created world");
+        //init_app(&mut world).await;
+        printlog("running run_app - run init_app");
+
+        println!("running init_app - started");
+        printlog("running init_app - created logger");
+
+        printlog("running init_app - created window");
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            // Winit prevents sizing with CSS, so we have to set
+            // the size manually when on web.
+            use winit::dpi::PhysicalSize;
+            window.set_inner_size(PhysicalSize::new(450, 400));
+
+            use winit::platform::web::WindowExtWebSys;
+            web_sys::window()
+                .and_then(|win| win.document())
+                .and_then(|doc| {
+                    let dst = doc.get_element_by_id("wasm-example")?;
+                    let canvas = web_sys::Element::from(window.canvas());
+                    dst.append_child(&canvas).ok()?;
+                    Some(())
+                })
+                .expect("Couldn't append canvas to document body.");
+        }
+
+        //let device = pollster::block_on(async {
+        //    Device::new(&window).await
+        //});
+        let device = Device::new(&window).await;
+
+        printlog("running init_app - loading assets outside schedule");
+        //let assets = Assets::load_and_return(&device);
+        let assets = Assets::load_and_return(&device).await;
+        /*
+        let assets = pollster::block_on(async {
+            Assets::load_and_return(&device).await
+        });
+        */
+        let renderers = Renderers::init(&device);
+        printlog("running init_app - done loading assets outside schedule");
+
+        world.init_resource::<Events<WindowResizeEvent>>();
+        world.init_resource::<Events<KeyboardEvent>>();
+        world.init_resource::<Events<MouseEvent>>();
+
+        world.insert_non_send_resource(event_loop);
+        world.insert_non_send_resource(window);
+
+        world.insert_resource(AppState {
+            running: true,
+            webxr: webxr
+        });
+        world.insert_resource(device);
+        world.insert_resource(assets);
+
+        //NOTE not sure if this ok as just init_resource
+        world.insert_resource(renderers);
+        world.insert_resource(FrameTime::new());
+        world.insert_resource(Input::new());
+        world.insert_resource(PhysicsWorld::new());
+
+
+        let spawn_scene_schedule = new_spawn_scene_schedule();
+        world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
+        let preupdate_schedule = new_preupdate_schedule();
+        world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
+        let update_schedule = new_update_schedule();
+        world.add_schedule(update_schedule.0, update_schedule.1);
+        let render_schedule = new_render_schedule();
+        world.add_schedule(render_schedule.0, render_schedule.1);
+
+        Self {
+            window,
+            world,
+        }
+    }
+}
 
 
 
@@ -112,39 +135,16 @@ pub async fn run_app() {
 
     init_logging();
     printlog("running run_app - starting");
-    let mut world = World::default();
-    world.init_resource::<Schedules>();
-
-    printlog("running run_app - created world");
-    init_app(&mut world).await;
-    printlog("running run_app - run init_app");
 
 
-    let spawn_scene_schedule = new_spawn_scene_schedule();
-    world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
+    let event_loop = EventLoop::new();
+    printlog("running init_app - created event_loop");
 
-    let preupdate_schedule = new_preupdate_schedule();
-    world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
-
-    let update_schedule = new_update_schedule();
-    world.add_schedule(update_schedule.0, update_schedule.1);
-
-    let render_schedule = new_render_schedule();
-    world.add_schedule(render_schedule.0, render_schedule.1);
-
-
-    /*
-    loop {
-        world.run_schedule(spawn_scene_schedule.1);
-        world.run_schedule(preupdate_schedule.1);
-        world.run_schedule(update_schedule.1);
-        world.run_schedule(render_schedule.1);
-
-        if !world.resource::<AppState>().running {
-            return;
-        }
-    }
-    */
+    let window = WindowBuilder::new()
+        .with_title("Demo")
+        .with_inner_size(SurfaceSize::new(1900, 1200))
+        .build(&event_loop)
+        .unwrap();
 
 
     let mut handle_events_system_state: SystemState<(
@@ -273,11 +273,6 @@ pub async fn run_app() {
 }
 
 
-
-#[derive(Resource)]
-pub struct AppState {
-    pub running: bool,
-}
 
 
 

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::components::{Camera, Skybox, Transform, Player, ModelSpec, Light};
 use crate::assets::{Assets,Renderers};
+use crate::app::{AppState};
 use crate::model::Model;
 use crate::renderers::{SkyboxPass, PhongConfig, PhongPass};
 
@@ -84,10 +85,11 @@ fn new_bundle_encoder<'a>(device: &'a Device) -> wgpu::RenderBundleEncoder<'a> {
 pub fn prepare_render_pipelines(
     device: Res<Device>,
     assets: Res<Assets>,
+    appstate: Res<AppState>,
     mut renderers: ResMut<Renderers>,
     mut commands: Commands,
 ) {
-    let webxr = false;
+    let webxr = appstate.webxr;
     renderers.skybox_renderer = Some(SkyboxPass::new(
         &device,
         &assets,
