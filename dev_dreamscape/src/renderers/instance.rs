@@ -3,6 +3,7 @@ use crate::math::Mat3;
 use crate::components::Transform;
 use crate::model;
 
+// Instance data tp upload to GPU for PhongPass
 pub fn instance_raw(transform: &&Transform) -> InstanceRaw {
     InstanceRaw {
         model: transform.matrix().into(),

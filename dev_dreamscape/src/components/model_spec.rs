@@ -1,25 +1,15 @@
 use bevy_ecs::prelude::*;
 
 
-pub enum ShaderStage {
-    /*
-    Color(ColorShader),
-    */
-    Diffuse,
-    Skybox,
-}
-
 #[derive(Component)]
 pub struct ModelSpec {
-    pub modelname: String,
-    pub shaderstages: Vec<ShaderStage>
+    pub modelname: String
 }
 
 impl ModelSpec {
-    pub fn new(modelname: String, shaderstages: Vec<ShaderStage>) -> ModelSpec {
+    pub fn new(modelname: String) -> ModelSpec {
         Self {
-            modelname,
-            shaderstages
+            modelname
         }
     }
 }
