@@ -50,6 +50,7 @@ pub fn new_preupdate_schedule() -> (Schedule, PreupdateLabel) {
             //grab_cursor,
             resize_device,
             update_input_state,
+            Player::update_player_view_xr,
             update_frame_time,
         ));
     (schedule, PreupdateLabel)

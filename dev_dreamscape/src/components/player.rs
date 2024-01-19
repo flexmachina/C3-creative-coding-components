@@ -3,7 +3,7 @@ use crate::app::{AppState};
 use crate::components::camera::Camera;
 use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
-use crate::events::WindowResizeEvent;
+use crate::events::{WindowResizeEvent, CameraSetEvent};
 use crate::input::Input;
 use crate::math::Vec3f;
 use crate::physics_world::PhysicsWorld;
@@ -13,8 +13,10 @@ use crate::frame_time::FrameTime;
 
 #[derive(Component)]
 pub struct Player {
+    /*
     target_pt: Option<Vec3f>,
     target_body: Option<RigidBodyHandle>,
+    */
     collider_handle: ColliderHandle,
     h_rot_acc: f32,
     v_rot_acc: f32,
@@ -52,8 +54,10 @@ impl Player {
         commands.spawn((
             Player {
                 collider_handle,
+                /*
                 target_pt: None,
                 target_body: None,
+                */
                 h_rot_acc: 0.0,
                 v_rot_acc: 0.0,
                 translation_acc: Vec3f::zeros()
@@ -63,12 +67,26 @@ impl Player {
         ));
     }
 
+    /*
     pub fn target_pt(&self) -> Option<Vec3f> {
         self.target_pt
     }
 
     pub fn target_body(&self) -> Option<RigidBodyHandle> {
         self.target_body
+    }
+    */
+
+    //Player isn't moving here, just looking around
+    //(likely in WebXR, so only the view needs to change, no need to change physics)
+    pub fn update_player_view_xr(mut player: Query<(&mut Self, &mut Camera, &mut Transform)>,
+                                mut cameraset_events: EventReader<CameraSetEvent>) {
+
+        if let Some(e) = cameraset_events.iter().last() {
+            let (mut player, mut camera, mut transform) = player.single_mut();
+            transform.set_pose(e.pos, e.rot);
+            camera.set_matrix(e.projection_matrix);
+        }
     }
 
     pub fn update(
@@ -94,7 +112,7 @@ impl Player {
             player.translate(&mut transform, dt, &input, &mut physics);
         }
 
-        update_target((&mut player, &transform), &physics);
+        //update_target((&mut player, &transform), &physics);
     }
 
     fn translate(
@@ -176,6 +194,7 @@ impl Player {
     }
 }
 
+/*
 fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
     if let Some((hit_pt, _, hit_collider)) = physics.cast_ray(
         player.1.position(),
@@ -194,6 +213,7 @@ fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
         player.0.target_body = None;
     }
 }
+*/
 
 fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, device: &Device) {
     //camera.Projection.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);

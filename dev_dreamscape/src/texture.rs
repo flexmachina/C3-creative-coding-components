@@ -3,7 +3,7 @@ use image::{GenericImageView, RgbaImage};
 use wgpu::{AstcBlock, AstcChannel};
 
 use crate::assets;
-use crate::wgpu_ext::device::{DeviceExt, TextureDataOrder};
+use crate::utils::wgpu_ext::{DeviceExt, TextureDataOrder};
 
 
 pub struct Texture {

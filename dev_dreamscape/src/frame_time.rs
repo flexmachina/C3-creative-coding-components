@@ -25,21 +25,20 @@ impl FrameTime {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, duration: Option<std::time::Duration>) {
         // Stolen from Kajiya
         let now = Instant::now();
-        let dt_duration = now - self.last_frame_instant;
-        self.last_frame_instant = now;
-
+        let dt_duration = duration.unwrap_or(now - self.last_frame_instant);
         let raw = dt_duration.as_secs_f32();
+        
+        self.last_frame_instant = self.last_frame_instant + dt_duration;
 
         if self.queue.len() >= FrameTime::DT_FILTER_WIDTH {
             self.queue.pop_front();
         }
         self.queue.push_back(raw);
-
         self.delta = self.queue.iter().copied().sum::<f32>() / self.queue.len() as f32;
 
-        //println!("frame time change {}", &self.delta)
+        println!("frame time change {}", &self.delta)
     }
 }

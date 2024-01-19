@@ -4,7 +4,7 @@ mod update_input_state;
 mod schedules;
 
 use crate::device::Device;
-use crate::events::{KeyboardEvent, WindowResizeEvent};
+use crate::events::{KeyboardEvent, WindowResizeEvent, FrameTimeEvent};
 use crate::physics_world::PhysicsWorld;
 use crate::app::AppState;
 use bevy_ecs::prelude::*;
@@ -35,6 +35,18 @@ pub fn update_physics(mut physics: ResMut<PhysicsWorld>, frame_time: Res<FrameTi
 }
 
 
-pub fn update_frame_time(mut frame_time: ResMut<FrameTime>) {
-    frame_time.update();
+pub fn update_frame_time(appstate: Res<AppState>,
+    mut frame_time: ResMut<FrameTime>, mut frametime_events: EventReader<FrameTimeEvent>) {
+    
+    if appstate.frametime_manual && frametime_events.len() > 0
+    {
+        for frametime_event in frametime_events.iter() {
+            frame_time.update(Some(frametime_event.duration));
+        }
+    } else {
+        frame_time.update(None);
+    }
 }
+
+
+

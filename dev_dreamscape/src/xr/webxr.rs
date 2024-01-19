@@ -61,14 +61,14 @@ pub fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsV
     Ok(gl)
 }
 
-pub struct XrApp {
+pub struct WebXRApp {
     session: Rc<RefCell<Option<XrSession>>>,
     ref_space: Rc<RefCell<Option<XrReferenceSpace>>>,
     gl: Rc<WebGl2RenderingContext>,
     app: Rc<RefCell<crate::app::App>>,
 }
 
-impl XrApp {
+impl WebXRApp {
     pub fn new(app: Rc<RefCell<crate::app::App>>) -> Self {
 
         let session = Rc::new(RefCell::new(None));
@@ -150,14 +150,14 @@ impl XrApp {
             };
 
             let color_texture = crate::utils::create_view_from_device_framebuffer(
-                &state.render_state.device,
+                app.device(),
                 framebuffer.clone(),
                 &xr_gl_layer,
-                state.render_state.color_format,
+                app.color_format(),
                 "device framebuffer (colour)");
 
             let depth_texture = crate::utils::create_view_from_device_framebuffer(
-                &state.render_state.device,
+                app.device(),
                 framebuffer,
                 &xr_gl_layer,
                 crate::texture::Texture::DEPTH_FORMAT,
@@ -182,13 +182,10 @@ impl XrApp {
                 let rotation = Quat::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
                 let rotation = UnitQuat::new_normalize(rotation);
 
-                // Callback
-                app.update_camera(position, rotation, to_mat(&view.projection_matrix()));
-
                 let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
                 last_frame_time.replace(time);
                 // Callback
-                app.update_scene(delta_time);
+                app.update_scene(delta_time, position, rotation, to_mat(&view.projection_matrix())  );
 
                 // Each view is rendered to a different region of the same framebuffer,
                 // so only clear the framebuffer once before the first render pass.

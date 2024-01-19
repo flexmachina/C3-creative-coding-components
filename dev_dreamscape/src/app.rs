@@ -1,5 +1,6 @@
 use crate::device::{Device, SurfaceSize};
-use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent, FrameTimeEvent};
+use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent,
+                    FrameTimeEvent, CameraSetEvent};
 use crate::frame_time::FrameTime;
 use crate::input::Input;
 use crate::physics_world::PhysicsWorld;
@@ -15,14 +16,15 @@ use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent}
 
 use crate::systems::*;
 use crate::assets::{Assets, Renderers};
-use crate::renderers::{XrApp};
+use crate::xr::{WebXRApp};
 use crate::logging::{init_logging, printlog};
 
 
 #[derive(Resource)]
 pub struct AppState {
     pub running: bool,
-    pub webxr: bool
+    pub webxr: bool,
+    pub frametime_manual: bool,
 }
 
 pub struct App {
@@ -93,11 +95,11 @@ impl App {
 
         world.insert_resource(AppState {
             running: true,
-            webxr: webxr
+            webxr: webxr,
+            frametime_manual: webxr
         });
         world.insert_resource(device);
         world.insert_resource(assets);
-
         //NOTE not sure if this ok as just init_resource
         world.insert_resource(renderers);
         world.insert_resource(FrameTime::new());
@@ -106,12 +108,16 @@ impl App {
 
         let mut world_systemstate: SystemState<(
             NonSend<Window>,
+            Res<Device>,
+            Res<Assets>,
+            Res<Renderers>,
             //NonSendMut<EventLoop<()>>,
             ResMut<Input>,
             EventWriter<WindowResizeEvent>,
             EventWriter<KeyboardEvent>,
             EventWriter<MouseEvent>,
             EventWriter<FrameTimeEvent>,
+            EventWriter<CameraSetEvent>,
         )> = SystemState::from_world(&mut world);
 
 
@@ -125,23 +131,38 @@ impl App {
         world.add_schedule(render_schedule.0, render_schedule.1);
 
         Self {
-            window,
             world,
+            world_systemstate
         }
     }
 
-    #[allow(dead_code)]
-    fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
-        //TODO Do this via event 
-        //self.scene.camera_transform.set_pose(pos, rot);
-        //self.scene.camera.projection.set_matrix(projection_matrix);
+    fn device(&self) -> &Device {
+        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get(&self.world);
+        device
     }
 
-    fn update_scene(&mut self, dt: std::time::Duration) {
+    fn color_format(&self) -> wgpu::TextureFormat {
+        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get(&self.world);
+        device.surface_texture_format()
+    }
+
+    #[allow(dead_code)]
+    fn update_scene(&mut self, duration: std::time::Duration,
+                    pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
         //TODO need to set the time via event
-        world.run_schedule(spawn_scene_schedule.1);
-        world.run_schedule(preupdate_schedule.1);
-        world.run_schedule(update_schedule.1);
+        let (_,_,_,_,_,_,_,_,mut frametime_events, mut cameraset_events) = 
+                            self.world_systemstate.get_mut(&self.world);
+        cameraset_events.send(CameraSetEvent {
+            pos,
+            rot,
+            projection_matrix
+        });
+        frametime_events.send(FrameTimeEvent {
+            duration,
+        });
+        self.world.run_schedule(spawn_scene_schedule.1);
+        self.world.run_schedule(preupdate_schedule.1);
+        self.world.run_schedule(update_schedule.1);
     }
 
     fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
@@ -194,7 +215,7 @@ pub struct Experience {
     pub app: Rc<RefCell<App>>,
     #[cfg(target_arch = "wasm32")]
     #[allow(dead_code)]
-    xr_app: Option<XrApp>,
+    xr_app: Option<WebXRApp>,
 }
 
 impl Experience {
@@ -205,7 +226,7 @@ impl Experience {
         #[cfg(target_arch = "wasm32")]
         {
             let xr_app = if webxr {
-                let xr_app = XrApp::new(app.clone());
+                let xr_app = WebXRApp::new(app.clone());
                 xr_app.init().await;
                 Some(xr_app)
             } else {
@@ -255,18 +276,8 @@ pub async fn run_experience(webxr: bool) {
     }
     printlog("running init_app - created window");
 
-
     let experience = Experience::new(window, webxr).await;
     printlog("running init_app - created experience");
-
-    let mut handle_events_system_state: SystemState<(
-        NonSend<Window>,
-        //NonSendMut<EventLoop<()>>,
-        ResMut<Input>,
-        EventWriter<WindowResizeEvent>,
-        EventWriter<KeyboardEvent>,
-        EventWriter<MouseEvent>,
-    )> = SystemState::from_world(&mut world);
 
     //Not sure why this was done? Adding event_loop resource and then removing it again
     //I don't think is needed anymore
@@ -281,16 +292,19 @@ pub async fn run_experience(webxr: bool) {
 
         //Not sure if this will work on WASM
         //*control_flow = ControlFlow::Poll;
-
+        let mut app = experience.app.borrow_mut();
         let (
             mut window,
-            //mut event_loop,
+            _,
+            _,
+            _,
             mut input,
             mut resize_events,
             mut keyboard_events,
-            mut mouse_events
-        ) = handle_events_system_state.get_mut(&mut world);
-
+            mut mouse_events,
+            _,
+            _
+        ) = app.world_systemstate.get_mut(&mut world);
 
 
         input.reset();
@@ -360,7 +374,6 @@ pub async fn run_experience(webxr: bool) {
                 window.request_redraw();
             },
 
-
             _ => {}
         }
 
@@ -368,8 +381,6 @@ pub async fn run_experience(webxr: bool) {
             *control_flow = ControlFlow::Exit;
             //return;
         }
-
-
     };
 
 
