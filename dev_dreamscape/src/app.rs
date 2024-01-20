@@ -29,7 +29,11 @@ pub struct AppState {
 
 pub struct App {
     pub world: World,
-    pub world_systemstate: Rc<RefCell<SystemState>>,
+    //Not sure why this would be necessary
+    //pub world_systemstate: Rc<RefCell<SystemState>>,
+    //pub world_queries_systemstate: Rc<RefCell<SystemState>>,
+    pub world_systemstate: SystemState,
+    pub world_queries_systemstate: SystemState,
 }
 
 
@@ -110,7 +114,7 @@ impl App {
             NonSend<Window>,
             Res<Device>,
             Res<Assets>,
-            Res<Renderers>,
+            ResMut<Renderers>,
             //NonSendMut<EventLoop<()>>,
             ResMut<Input>,
             EventWriter<WindowResizeEvent>,
@@ -120,6 +124,12 @@ impl App {
             EventWriter<CameraSetEvent>,
         )> = SystemState::from_world(&mut world);
 
+        let mut world_queries_systemstate: SystemState<(
+            Query<(&Camera, &Transform), With<Player>>,
+            Query<(&ModelSpec, &Transform)>,
+            Query<(&Light, &Transform)>,
+            Query<&Skybox>,
+        )> = SystemState::from_world(&mut world);
 
         let spawn_scene_schedule = new_spawn_scene_schedule();
         world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
@@ -132,7 +142,8 @@ impl App {
 
         Self {
             world,
-            world_systemstate
+            world_systemstate,
+            world_queries_systemstate,
         }
     }
 
@@ -167,6 +178,24 @@ impl App {
 
     fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
                          viewport: Option<Rect>, clear: bool) {
+
+        let (_,device,assets, mut renderers,_,_,_,_,_,_) = 
+                            self.world_systemstate.get_mut(&self.world);
+         
+        let (camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
+                            self.world_systemstate.get(&self.world);
+        
+        render_to_texture(
+                device,
+                assets,
+                renderers,
+                camera_qry,
+                meshes_qry,
+                light_qry
+                skyboxes_qry,              
+                &color_texture, &depth_texture,
+                viewport: viewport, clear);
+
         //TODO access renderers and run returned command buffers
 
         //basically access the skybox and phong renderers and get the command buffers
@@ -304,7 +333,7 @@ pub async fn run_experience(webxr: bool) {
             mut mouse_events,
             _,
             _
-        ) = app.world_systemstate.get_mut(&mut world);
+        ) = app.world_systemstate.get_mut(&mut app.world);
 
 
         input.reset();
@@ -362,10 +391,10 @@ pub async fn run_experience(webxr: bool) {
 
 
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                world.run_schedule(spawn_scene_schedule.1);
-                world.run_schedule(preupdate_schedule.1);
-                world.run_schedule(update_schedule.1);
-                world.run_schedule(render_schedule.1);
+                app.world.run_schedule(spawn_scene_schedule.1);
+                app.world.run_schedule(preupdate_schedule.1);
+                app.world.run_schedule(update_schedule.1);
+                app.world.run_schedule(render_schedule.1);
             },
 
             Event::RedrawEventsCleared => {
@@ -377,7 +406,7 @@ pub async fn run_experience(webxr: bool) {
             _ => {}
         }
 
-        if !world.resource::<AppState>().running {
+        if !app.world.resource::<AppState>().running {
             *control_flow = ControlFlow::Exit;
             //return;
         }
