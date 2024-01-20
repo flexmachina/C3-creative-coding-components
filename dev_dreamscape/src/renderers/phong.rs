@@ -403,7 +403,7 @@ impl PhongPass {
         queue: &Queue,
         nodes: &Vec<(&Model, Vec<&Transform>)>,
         camera: (&Camera, &Transform),
-        light: (&Light, &Transform),
+        light: (&Light, &Transform, &Model),
         viewport: &Option<Rect>,
         clear_color: bool,
         clear_depth: bool
@@ -508,16 +508,16 @@ impl PhongPass {
 
                         
             // Setup lighting pipeline
-            // render_pass.set_pipeline(&self.light_render_pipeline);    
-            // render_pass.set_bind_group(0, &self.light_global_bind_group, &[]);
-            // // TODO: fix this hack and define a model to use for lights
-            // render_pass.draw_model(&nodes[0].model);
+            render_pass.set_pipeline(&self.light_render_pipeline);    
+            render_pass.set_bind_group(0, &self.light_global_bind_group, &[]);
+            // Draw light
+            render_pass.draw_model(light.2);
             
             // Setup phong pipeline
             render_pass.set_pipeline(&self.phong_render_pipeline);
             render_pass.set_bind_group(0, &self.phong_global_bind_group, &[]);
 
-            // Render/draw all nodes/models
+            // Draw all node models
             for (model_index, node) in nodes.iter().enumerate() {
                 let (model, transforms) = node;
 

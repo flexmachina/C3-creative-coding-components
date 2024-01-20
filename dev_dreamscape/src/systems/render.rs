@@ -36,8 +36,8 @@ pub fn render(
     assets: Res<Assets>,
     mut renderers: ResMut<Renderers>,
     camera_qry: Query<(&Camera, &Transform), With<Player>>,
-    meshes_qry: Query<(&ModelSpec, &Transform)>,
-    light_qry: Query<(&Light, &Transform)>,
+    meshes_qry: Query<(&ModelSpec, &Transform), Without<Light>>,
+    light_qry: Query<(&Light, &Transform, &ModelSpec)>,
     skyboxes_qry: Query<&Skybox>,
 ) {
     let camera = camera_qry.single();
@@ -62,6 +62,10 @@ pub fn render(
         let model =  assets.model_store.get(modelname).unwrap();
         nodes.push((model, transforms));
     }
+
+    // Get light model
+    let light_model = assets.model_store.get(&light.2.modelname).unwrap();
+    let light = (light.0, light.1, light_model);
 
     //
     // Render passes
