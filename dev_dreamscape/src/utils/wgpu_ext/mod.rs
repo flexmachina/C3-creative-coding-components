@@ -1,3 +1,3 @@
 pub mod device;
 
-pub use device::{DeviceExt, TextureDataOrder}
+pub use device::{DeviceExt, TextureDataOrder};

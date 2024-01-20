@@ -85,7 +85,7 @@ impl Player {
         if let Some(e) = cameraset_events.iter().last() {
             let (mut player, mut camera, mut transform) = player.single_mut();
             transform.set_pose(e.pos, e.rot);
-            camera.set_matrix(e.projection_matrix);
+            camera.set_projection_matrix(e.projection_matrix);
         }
     }
 

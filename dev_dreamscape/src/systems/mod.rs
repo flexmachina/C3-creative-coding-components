@@ -10,7 +10,7 @@ use crate::app::AppState;
 use bevy_ecs::prelude::*;
 use winit::event::VirtualKeyCode;
 
-pub use render::{render,prepare_render_pipelines};
+pub use render::{render,prepare_render_pipelines,render_to_texture};
 pub use update_input_state::update_input_state;
 //pub use grab_cursor::grab_cursor;
 pub use schedules::{new_spawn_scene_schedule,new_preupdate_schedule,

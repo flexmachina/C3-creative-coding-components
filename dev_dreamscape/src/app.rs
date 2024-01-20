@@ -2,6 +2,7 @@ use crate::device::{Device, SurfaceSize};
 use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent,
                     FrameTimeEvent, CameraSetEvent};
 use crate::frame_time::FrameTime;
+use crate::math::{Rect, Vec3f, UnitQuatf, Mat4f };
 use crate::input::Input;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
@@ -16,9 +17,12 @@ use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent}
 
 use crate::systems::*;
 use crate::assets::{Assets, Renderers};
+use crate::components::{Camera,Transform,Light,Skybox,ModelSpec,Player};
 use crate::xr::{WebXRApp};
 use crate::logging::{init_logging, printlog};
 
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[derive(Resource)]
 pub struct AppState {
@@ -32,8 +36,25 @@ pub struct App {
     //Not sure why this would be necessary
     //pub world_systemstate: Rc<RefCell<SystemState>>,
     //pub world_queries_systemstate: Rc<RefCell<SystemState>>,
-    pub world_systemstate: SystemState,
-    pub world_queries_systemstate: SystemState,
+    pub world_systemstate: SystemState<(
+            NonSend<Window>,
+            Res<Device>,
+            Res<Assets>,
+            ResMut<Renderers>,
+            //NonSendMut<EventLoop<()>>,
+            ResMut<Input>,
+            EventWriter<WindowResizeEvent>,
+            EventWriter<KeyboardEvent>,
+            EventWriter<MouseEvent>,
+            EventWriter<FrameTimeEvent>,
+            EventWriter<CameraSetEvent>,
+        )>,
+    pub world_queries_systemstate: SystemState<(
+            Query<(&Camera, &Transform), With<Player>>,
+            Query<(&ModelSpec, &Transform)>,
+            Query<(&Light, &Transform)>,
+            Query<&Skybox>,
+        )>,
 }
 
 
@@ -148,12 +169,12 @@ impl App {
     }
 
     fn device(&self) -> &Device {
-        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get(&self.world);
+        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get_mut(&mut self.world);
         device
     }
 
     fn color_format(&self) -> wgpu::TextureFormat {
-        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get(&self.world);
+        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get_mut(&mut self.world);
         device.surface_texture_format()
     }
 
@@ -162,7 +183,7 @@ impl App {
                     pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
         //TODO need to set the time via event
         let (_,_,_,_,_,_,_,_,mut frametime_events, mut cameraset_events) = 
-                            self.world_systemstate.get_mut(&self.world);
+                            self.world_systemstate.get_mut(&mut self.world);
         cameraset_events.send(CameraSetEvent {
             pos,
             rot,
@@ -180,10 +201,10 @@ impl App {
                          viewport: Option<Rect>, clear: bool) {
 
         let (_,device,assets, mut renderers,_,_,_,_,_,_) = 
-                            self.world_systemstate.get_mut(&self.world);
+                            self.world_systemstate.get_mut(&mut self.world);
          
         let (camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
-                            self.world_systemstate.get(&self.world);
+                            self.world_queries_systemstate.get_mut(&mut self.world);
         
         render_to_texture(
                 device,
@@ -191,10 +212,10 @@ impl App {
                 renderers,
                 camera_qry,
                 meshes_qry,
-                light_qry
+                light_qry,
                 skyboxes_qry,              
-                &color_texture, &depth_texture,
-                viewport: viewport, clear);
+                &color_texture, depth_texture,
+                viewport, clear);
 
         //TODO access renderers and run returned command buffers
 

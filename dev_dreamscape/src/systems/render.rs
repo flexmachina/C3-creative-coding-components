@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::math::Rect;
 use crate::components::{Camera, Skybox, Transform, Player, ModelSpec, Light};
 use crate::assets::{Assets,Renderers};
 use crate::app::{AppState};
@@ -34,7 +35,7 @@ pub fn prepare_render_pipelines(
 }
 
 
-fn render_to_texture(
+pub fn render_to_texture(
                 device: Res<Device>,
                 assets: Res<Assets>,
                 mut renderers: ResMut<Renderers>,
@@ -77,7 +78,7 @@ fn render_to_texture(
     let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
     let depth_view = match depth_texture {
         Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
-        _ => &device.depth_tex().view
+        _ => device.depth_tex().view
     };
 
 
@@ -123,15 +124,15 @@ pub fn render(
     let surface = device.surface(); 
     let surface_texture = surface.get_current_texture().unwrap();
     render_to_texture(
-                device.clone(),
+                bevy_ecs::change_detection::Res::<'_, Device>::clone(&device),
                 assets,
-                renderers
+                renderers,
                 camera_qry,
                 meshes_qry,
-                light_qry
+                light_qry,
                 skyboxes_qry,              
-                &surface_texture,
+                &surface_texture.texture,
                 None,
-                None, true)
+                None, true);
     surface_texture.present();
 }
