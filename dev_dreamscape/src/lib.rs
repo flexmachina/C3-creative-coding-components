@@ -11,9 +11,12 @@ mod physics_world;
 mod systems;
 mod model;
 mod texture;
-mod xr;
 mod utils;
 mod renderers;
+
+
+#[cfg(target_arch="wasm32")]
+mod xr;
 
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;

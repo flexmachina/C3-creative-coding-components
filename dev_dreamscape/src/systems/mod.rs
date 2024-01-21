@@ -15,6 +15,7 @@ pub use update_input_state::update_input_state;
 //pub use grab_cursor::grab_cursor;
 pub use schedules::{new_spawn_scene_schedule,new_preupdate_schedule,
                     new_update_schedule,new_render_schedule};
+pub use schedules::{SpawnLabel, PreupdateLabel, UpdateLabel, RenderLabel};
 use crate::frame_time::FrameTime;
 
 pub fn resize_device(mut device: ResMut<Device>, mut events: EventReader<WindowResizeEvent>) {

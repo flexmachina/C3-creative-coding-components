@@ -1,4 +1,4 @@
-pub mod webxr;
+mod webxr;
 
 
 pub use webxr::WebXRApp;

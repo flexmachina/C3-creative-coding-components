@@ -12,13 +12,16 @@ use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 #[cfg(target_arch="wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
+#[cfg(target_arch="wasm32")]
+use crate::xr::{WebXRApp};
+
 use winit::window::{WindowBuilder, Window};
 use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent};
 
 use crate::systems::*;
 use crate::assets::{Assets, Renderers};
 use crate::components::{Camera,Transform,Light,Skybox,ModelSpec,Player};
-use crate::xr::{WebXRApp};
+
 use crate::logging::{init_logging, printlog};
 
 use std::cell::RefCell;
@@ -33,28 +36,11 @@ pub struct AppState {
 
 pub struct App {
     pub world: World,
-    //Not sure why this would be necessary
-    //pub world_systemstate: Rc<RefCell<SystemState>>,
-    //pub world_queries_systemstate: Rc<RefCell<SystemState>>,
-    pub world_systemstate: SystemState<(
-            NonSend<Window>,
-            Res<Device>,
-            Res<Assets>,
-            ResMut<Renderers>,
-            //NonSendMut<EventLoop<()>>,
-            ResMut<Input>,
-            EventWriter<WindowResizeEvent>,
-            EventWriter<KeyboardEvent>,
-            EventWriter<MouseEvent>,
-            EventWriter<FrameTimeEvent>,
-            EventWriter<CameraSetEvent>,
-        )>,
-    pub world_queries_systemstate: SystemState<(
-            Query<(&Camera, &Transform), With<Player>>,
-            Query<(&ModelSpec, &Transform)>,
-            Query<(&Light, &Transform)>,
-            Query<&Skybox>,
-        )>,
+
+    pub spawn_scene_schedule_label: SpawnLabel,
+    pub preupdate_schedule_label: PreupdateLabel,
+    pub update_schedule_label: UpdateLabel,
+    pub render_schedule_label: RenderLabel,
 }
 
 
@@ -131,6 +117,37 @@ impl App {
         world.insert_resource(Input::new());
         world.insert_resource(PhysicsWorld::new());
 
+
+        let spawn_scene_schedule = new_spawn_scene_schedule();
+        let spawn_scene_schedule_label = spawn_scene_schedule.1.clone();
+        world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
+        let preupdate_schedule = new_preupdate_schedule();
+        let preupdate_schedule_label = preupdate_schedule.1.clone();
+        world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
+        let update_schedule = new_update_schedule();
+        let update_schedule_label = update_schedule.1.clone();
+        world.add_schedule(update_schedule.0, update_schedule.1);
+        let render_schedule = new_render_schedule();
+        let render_schedule_label = render_schedule.1.clone();
+        world.add_schedule(render_schedule.0, render_schedule.1);
+
+        Self {
+            world,
+            spawn_scene_schedule_label,
+            preupdate_schedule_label,
+            update_schedule_label,
+            render_schedule_label
+        }
+    }
+
+
+    fn world_systemstate_get_mut(&mut self) -> (NonSend<Window>,Res<Device>,Res<Assets>,
+                                ResMut<Renderers>,//NonSendMut<EventLoop<()>>,
+                                ResMut<Input>,
+                                EventWriter<WindowResizeEvent>, EventWriter<KeyboardEvent>,
+                                EventWriter<MouseEvent>, EventWriter<FrameTimeEvent>,
+                                EventWriter<CameraSetEvent>) {
+
         let mut world_systemstate: SystemState<(
             NonSend<Window>,
             Res<Device>,
@@ -143,47 +160,30 @@ impl App {
             EventWriter<MouseEvent>,
             EventWriter<FrameTimeEvent>,
             EventWriter<CameraSetEvent>,
-        )> = SystemState::from_world(&mut world);
-
-        let mut world_queries_systemstate: SystemState<(
-            Query<(&Camera, &Transform), With<Player>>,
-            Query<(&ModelSpec, &Transform)>,
-            Query<(&Light, &Transform)>,
-            Query<&Skybox>,
-        )> = SystemState::from_world(&mut world);
-
-        let spawn_scene_schedule = new_spawn_scene_schedule();
-        world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
-        let preupdate_schedule = new_preupdate_schedule();
-        world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
-        let update_schedule = new_update_schedule();
-        world.add_schedule(update_schedule.0, update_schedule.1);
-        let render_schedule = new_render_schedule();
-        world.add_schedule(render_schedule.0, render_schedule.1);
-
-        Self {
-            world,
-            world_systemstate,
-            world_queries_systemstate,
-        }
+        )> = SystemState::from_world(&mut self.world);
+        world_systemstate.get_mut(&mut self.world)
     }
 
+
     fn device(&self) -> &Device {
-        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get_mut(&mut self.world);
-        device
+        //let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate_get_mut();
+        //&device
+        self.world.resource::<Device>()
     }
 
     fn color_format(&self) -> wgpu::TextureFormat {
-        let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate.get_mut(&mut self.world);
-        device.surface_texture_format()
+        //let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate_get_mut();
+        //device.surface_texture_format()
+        self.world.resource::<Device>().surface_texture_format()
     }
 
     #[allow(dead_code)]
     fn update_scene(&mut self, duration: std::time::Duration,
                     pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
+        
         //TODO need to set the time via event
         let (_,_,_,_,_,_,_,_,mut frametime_events, mut cameraset_events) = 
-                            self.world_systemstate.get_mut(&mut self.world);
+                            self.world_systemstate_get_mut();
         cameraset_events.send(CameraSetEvent {
             pos,
             rot,
@@ -192,19 +192,28 @@ impl App {
         frametime_events.send(FrameTimeEvent {
             duration,
         });
-        self.world.run_schedule(spawn_scene_schedule.1);
-        self.world.run_schedule(preupdate_schedule.1);
-        self.world.run_schedule(update_schedule.1);
+        let spawn_scene_schedule_label = self.spawn_scene_schedule_label.clone();
+        let preupdate_schedule_label = self.preupdate_schedule_label.clone();
+        let update_schedule_label = self.update_schedule_label.clone();
+        self.world.run_schedule(spawn_scene_schedule_label);
+        self.world.run_schedule(preupdate_schedule_label);
+        self.world.run_schedule(update_schedule_label);
     }
 
     fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
                          viewport: Option<Rect>, clear: bool) {
 
-        let (_,device,assets, mut renderers,_,_,_,_,_,_) = 
-                            self.world_systemstate.get_mut(&mut self.world);
-         
-        let (camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
-                            self.world_queries_systemstate.get_mut(&mut self.world);
+        let mut world_w_queries_systemstate: SystemState<(
+            Res<Device>,
+            Res<Assets>,
+            ResMut<Renderers>,
+            Query<(&Camera, &Transform), With<Player>>,
+            Query<(&ModelSpec, &Transform)>,
+            Query<(&Light, &Transform)>,
+            Query<&Skybox>,
+        )> = SystemState::from_world(&mut self.world);
+        let (device, assets, mut renderers, camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
+                            world_w_queries_systemstate.get_mut(&mut self.world);
         
         render_to_texture(
                 device,
@@ -337,12 +346,18 @@ pub async fn run_experience(webxr: bool) {
         .unwrap();
     */
 
+
+
+
+
+
     let event_handler = move |event: Event<()> , _: &EventLoopWindowTarget<()>, 
                              control_flow: &mut ControlFlow| {
 
         //Not sure if this will work on WASM
         //*control_flow = ControlFlow::Poll;
         let mut app = experience.app.borrow_mut();
+
         let (
             mut window,
             _,
@@ -354,7 +369,7 @@ pub async fn run_experience(webxr: bool) {
             mut mouse_events,
             _,
             _
-        ) = app.world_systemstate.get_mut(&mut app.world);
+        ) = app.world_systemstate_get_mut();
 
 
         input.reset();
@@ -412,10 +427,15 @@ pub async fn run_experience(webxr: bool) {
 
 
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                app.world.run_schedule(spawn_scene_schedule.1);
-                app.world.run_schedule(preupdate_schedule.1);
-                app.world.run_schedule(update_schedule.1);
-                app.world.run_schedule(render_schedule.1);
+                let spawn_scene_schedule_label = app.spawn_scene_schedule_label.clone();
+                let preupdate_schedule_label = app.preupdate_schedule_label.clone();
+                let update_schedule_label = app.update_schedule_label.clone();
+                let render_schedule_label = app.render_schedule_label.clone();
+
+                app.world.run_schedule(spawn_scene_schedule_label);
+                app.world.run_schedule(preupdate_schedule_label);
+                app.world.run_schedule(update_schedule_label);
+                app.world.run_schedule(render_schedule_label);
             },
 
             Event::RedrawEventsCleared => {
