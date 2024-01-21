@@ -67,7 +67,7 @@ impl Camera {
     // Perspective3.inverse is faster than general matrix inverse
     pub fn inv_projection_matrix(&self) -> Mat4f {
         match self.webxr {
-            true => self.perspective.inverse() * FLIPY_MATRIX, // assumes FLIPY_MATRIX is it's own inverse
+            true => self.perspective.inverse() * FLIPY_MATRIX, // assumes FLIPY_MATRIX is its own inverse
             false => self.perspective.inverse().clone()
         }
     }

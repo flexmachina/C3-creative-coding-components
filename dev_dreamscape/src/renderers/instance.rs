@@ -28,14 +28,14 @@ impl model::Vertex for InstanceRaw {
             // instance when the shader starts processing a new instance
             step_mode: wgpu::VertexStepMode::Instance,
             attributes: &[
+                // A Mat4x4 takes up 4 vertex slots as it is technically 4 vec4s.
+                // We need to define a slot for each vec4.
                 wgpu::VertexAttribute {
                     offset: 0,
                     // Phong vertex shader uses locations 0-4, so start at 5 here.
                     shader_location: 5,
                     format: wgpu::VertexFormat::Float32x4,
                 },
-                // A mat4 takes up 4 vertex slots as it is technically 4 vec4s. We need to define a slot
-                // for each vec4. We don't have to do this in code though.
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
                     shader_location: 6,
@@ -51,6 +51,7 @@ impl model::Vertex for InstanceRaw {
                     shader_location: 8,
                     format: wgpu::VertexFormat::Float32x4,
                 },
+                // Mat3x3 for rotation (normal direction)
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
                     shader_location: 9,
