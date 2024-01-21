@@ -117,6 +117,20 @@ impl Transform {
         // self.rotate calls rebuild_matrix
     }
 
+    // Translate around a `point` in space.
+    pub fn translate_around(&mut self, point: Vec3f, rotation: UnitQuatf) {
+        self.pos = point + rotation * (self.pos - point);
+        self.rebuild_matrix();
+    }
+
+    // Rotate around a `point` in space.
+    pub fn rotate_around(&mut self, point: Vec3f, rotation: UnitQuatf) {
+        self.translate_around(point, rotation);
+        self.rotate(rotation);
+        // self.translate_around and self.rotate both call rebuild_matrix
+        // TODO: remove these redundant calls
+    }
+
     fn rebuild_matrix(&mut self) {
         let rot_m = na::Rotation3::from(self.rot);
         let tr_m = na::Translation3::new(self.pos.x, self.pos.y, self.pos.z);

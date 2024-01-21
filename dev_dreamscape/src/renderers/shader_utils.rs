@@ -19,6 +19,8 @@ pub(crate) use load_shader;
 pub fn make_module(composer: &mut Composer, shader_path: &str, shader_source: &str, webxr: bool) -> naga::Module {
     
     let mut shader_defs = std::collections::HashMap::new();
+    // TODO: make shader_defs a parameter and don't hardcode MAX_LIGHTS here
+    shader_defs.insert("MAX_LIGHTS".to_string(), ShaderDefValue::Int(16));
     if webxr {
         shader_defs.insert("WEBXR".to_string(),  ShaderDefValue::Bool(true));
     }

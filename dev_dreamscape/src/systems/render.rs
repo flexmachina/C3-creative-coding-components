@@ -37,11 +37,10 @@ pub fn render(
     mut renderers: ResMut<Renderers>,
     camera_qry: Query<(&Camera, &Transform), With<Player>>,
     meshes_qry: Query<(&ModelSpec, &Transform), Without<Light>>,
-    light_qry: Query<(&Light, &Transform, &ModelSpec)>,
+    lights_qry: Query<(&Light, &Transform, &ModelSpec)>,
     skyboxes_qry: Query<&Skybox>,
 ) {
     let camera = camera_qry.single();
-    let light = light_qry.single();
   
     //
     // Gather models to render
@@ -63,9 +62,13 @@ pub fn render(
         nodes.push((model, transforms));
     }
 
-    // Get light model
-    let light_model = assets.model_store.get(&light.2.modelname).unwrap();
-    let light = (light.0, light.1, light_model);
+    // Gather light models
+    let mut lights: Vec<(&Light, &Transform)> = vec![];
+    for (light, transform, modelspec) in lights_qry.iter() {
+        lights.push((light, transform));
+    }
+    // TODO: don't hardcode. We rely on the same mode for all lights for instancing atm.
+    let light_model = assets.model_store.get("cube.obj").unwrap();
 
     //
     // Render passes
@@ -94,8 +97,9 @@ pub fn render(
         &device.queue(),
         &nodes,
         camera,
-        light,
-        &None, 
+        &lights,
+        light_model,
+        &None,
         false, 
         true,
     );

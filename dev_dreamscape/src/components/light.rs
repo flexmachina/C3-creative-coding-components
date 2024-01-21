@@ -20,7 +20,31 @@ impl Light {
             Light {
                 color: Vec3f::new(1., 1., 1.)
             },
-            Transform::from_position(Vec3f::new(0., 10., 0.)),
+            Transform::from_position(Vec3f::new(-5., 10., -5.)),
+            modelspec
+        ));
+        let modelspec = ModelSpec::new(String::from("cube.obj"));
+        commands.spawn((
+            Light {
+                color: Vec3f::new(1., 0., 0.)
+            },
+            Transform::from_position(Vec3f::new(5., 10., -5.)),
+            modelspec
+        ));
+        let modelspec = ModelSpec::new(String::from("cube.obj"));
+        commands.spawn((
+            Light {
+                color: Vec3f::new(0., 1., 0.)
+            },
+            Transform::from_position(Vec3f::new(5., 10., 5.)),
+            modelspec
+        ));
+        let modelspec = ModelSpec::new(String::from("cube.obj"));
+        commands.spawn((
+            Light {
+                color: Vec3f::new(0., 0., 1.)
+            },
+            Transform::from_position(Vec3f::new(-5., 10., 5.)),
             modelspec
         ));
     }

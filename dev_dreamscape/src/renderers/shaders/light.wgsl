@@ -13,8 +13,13 @@ struct Light {
     position: vec3<f32>,
     color: vec3<f32>,
 }
+
+struct Lights {
+    lights: array<Light, #MAX_LIGHTS>,
+}
+
 @group(0) @binding(1)
-var<uniform> light: Light;
+var<uniform> lights: Lights;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -27,10 +32,12 @@ struct VertexOutput {
 
 @vertex
 fn vs_main(
+    @builtin(instance_index) id: u32, // Hijack instancing to index into Lights array
     model: VertexInput,
 ) -> VertexOutput {
     let scale = 0.25;
     var out: VertexOutput;
+    let light = lights.lights[id];
     out.clip_position = camera.view_proj * vec4<f32>(model.position * scale + light.position, 1.0);
     out.color = light.color;
     return out;

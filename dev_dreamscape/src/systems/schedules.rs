@@ -1,5 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_ecs::schedule::ScheduleLabel;
+use crate::frame_time::FrameTime;
+use crate::math::{Vec3, Vec3f, UnitQuat};
 use crate::systems::{
         escape_on_exit,
         //grab_cursor,
@@ -15,7 +17,8 @@ use crate::components::{
     FreeBox,
     Light, 
     Player, 
-    Skybox, 
+    Skybox,
+    Transform
     //PlayerTarget
 };
 use crate::components::PhysicsBody;
@@ -62,6 +65,7 @@ pub struct UpdateLabel;
 pub fn new_update_schedule() -> (Schedule, UpdateLabel) {
     let mut schedule = Schedule::default();
     schedule
+        .add_systems(update_lights)
         .add_systems(update_physics)
         .add_systems(PhysicsBody::sync.after(update_physics))
         .add_systems(Player::update.after(update_physics))
@@ -84,10 +88,16 @@ pub fn new_render_schedule() -> (Schedule, RenderLabel) {
     (schedule, RenderLabel)
 }
 
-
-
-
-
-
-
-
+fn update_lights(
+    frame_time: Res<FrameTime>,
+    mut lights_query: Query<(&Light, &mut Transform)>
+) {
+    // Rotate lights about y axis at origin
+    let deg_per_second: f32 = 45.0;
+    for (_, mut transform) in lights_query.iter_mut() {
+        transform.translate_around(
+            Vec3f::zeros(),
+            UnitQuat::from_axis_angle(&Vec3::y_axis(), deg_per_second.to_radians() * frame_time.delta)
+        );
+    }
+}

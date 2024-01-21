@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use wgpu::{util::DeviceExt, BindGroupLayout, Queue};
+use wgpu::{BindGroupLayout, Queue};
 
 use crate::{
     components::{Camera, Light, Transform},
@@ -17,6 +17,8 @@ use super::{
     instance::InstanceRaw,
 };
 
+
+const MAX_LIGHTS: u64 = 16;
 
 #[repr(C)]
 #[derive(Copy, Clone, Default, bytemuck::Pod, bytemuck::Zeroable)]
@@ -102,14 +104,14 @@ impl PhongPass {
                         },
                         count: None,
                     },
-                    // Light
+                    // Lights
                     wgpu::BindGroupLayoutEntry {
                         binding: 1,
                         visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
-                            min_binding_size: wgpu::BufferSize::new(light_size),
+                            min_binding_size: wgpu::BufferSize::new(light_size * MAX_LIGHTS),
                         },
                         count: None,
                     },
@@ -137,11 +139,11 @@ impl PhongPass {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-
-        let light_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let light_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("[Phong] Light"),
-            contents: bytemuck::cast_slice(&[LightUniform::default()]),
+            size: light_size * MAX_LIGHTS,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
 
         // We also need a sampler for our textures
@@ -213,7 +215,7 @@ impl PhongPass {
                 ],
             });
 
-        // Setup the render pipeline
+        // Setup the render pipelines
         let phong_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("[Phong] Pipeline"),
             bind_group_layouts: &[&phong_global_bind_group_layout, &phong_local_bind_group_layout],
@@ -235,14 +237,14 @@ impl PhongPass {
                     },
                     count: None,
                 },
-                // Light
+                // Lights
                 wgpu::BindGroupLayoutEntry {
                     binding: 1,
                     visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
-                        min_binding_size: wgpu::BufferSize::new(light_size),
+                        min_binding_size: wgpu::BufferSize::new(light_size * MAX_LIGHTS),
                     },
                     count: None,
                 }
@@ -403,16 +405,24 @@ impl PhongPass {
         queue: &Queue,
         nodes: &Vec<(&Model, Vec<&Transform>)>,
         camera: (&Camera, &Transform),
-        light: (&Light, &Transform, &Model),
+        lights: &Vec<(&Light, &Transform)>,
+        light_model: &Model,
         viewport: &Option<Rect>,
         clear_color: bool,
         clear_depth: bool
     ) -> wgpu::CommandBuffer {
 
+        assert!(lights.len() < MAX_LIGHTS as usize);
+
+        let lights_data = lights
+            .iter()
+            .map(|l| light_uniform(l.0, l.1))
+            .collect::<Vec<_>>();
+
         queue.write_buffer(
             &self.light_buffer,
             0,
-            bytemuck::cast_slice(&[light_uniform(light.0, light.1)]),
+            bytemuck::cast_slice(&lights_data),
         );
 
         queue.write_buffer(
@@ -510,8 +520,11 @@ impl PhongPass {
             // Setup lighting pipeline
             render_pass.set_pipeline(&self.light_render_pipeline);    
             render_pass.set_bind_group(0, &self.light_global_bind_group, &[]);
-            // Draw light
-            render_pass.draw_model(light.2);
+
+            // Draw lights. Assume a single model which conveniently allows us to use
+            // instancing where the the instance_index can be used to index into
+            // to Lights array uniform buffer in the shader.
+            render_pass.draw_model_instanced(light_model, 0..lights.len() as u32);
             
             // Setup phong pipeline
             render_pass.set_pipeline(&self.phong_render_pipeline);
