@@ -14,12 +14,8 @@ struct Light {
     color: vec3<f32>,
 }
 
-struct Lights {
-    lights: array<Light, #MAX_LIGHTS>,
-}
-
 @group(0) @binding(1)
-var<uniform> lights: Lights;
+var<uniform> lights: array<Light, #MAX_LIGHTS>;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -97,22 +93,22 @@ fn vs_main(
     out.tangent_position = tangent_matrix * world_position.xyz;
     out.tangent_view_position = tangent_matrix * camera.view_pos.xyz;
 
-    out.tangent_light_position0 = tangent_matrix * lights.lights[0].position;
-    out.tangent_light_position1 = tangent_matrix * lights.lights[1].position;
-    out.tangent_light_position2 = tangent_matrix * lights.lights[2].position;
-    out.tangent_light_position3 = tangent_matrix * lights.lights[3].position;
-    out.tangent_light_position4 = tangent_matrix * lights.lights[4].position;
-    out.tangent_light_position5 = tangent_matrix * lights.lights[5].position;
-    out.tangent_light_position6 = tangent_matrix * lights.lights[6].position;
-    out.tangent_light_position7 = tangent_matrix * lights.lights[7].position;
-    out.tangent_light_position8 = tangent_matrix * lights.lights[8].position;
-    out.tangent_light_position9 = tangent_matrix * lights.lights[9].position;
-    out.tangent_light_position10 = tangent_matrix * lights.lights[10].position;
-    out.tangent_light_position11 = tangent_matrix * lights.lights[11].position;
-    out.tangent_light_position12 = tangent_matrix * lights.lights[12].position;
-    out.tangent_light_position13 = tangent_matrix * lights.lights[13].position;
-    out.tangent_light_position14 = tangent_matrix * lights.lights[14].position;
-    out.tangent_light_position15 = tangent_matrix * lights.lights[15].position;
+    out.tangent_light_position0 = tangent_matrix * lights[0].position;
+    out.tangent_light_position1 = tangent_matrix * lights[1].position;
+    out.tangent_light_position2 = tangent_matrix * lights[2].position;
+    out.tangent_light_position3 = tangent_matrix * lights[3].position;
+    out.tangent_light_position4 = tangent_matrix * lights[4].position;
+    out.tangent_light_position5 = tangent_matrix * lights[5].position;
+    out.tangent_light_position6 = tangent_matrix * lights[6].position;
+    out.tangent_light_position7 = tangent_matrix * lights[7].position;
+    out.tangent_light_position8 = tangent_matrix * lights[8].position;
+    out.tangent_light_position9 = tangent_matrix * lights[9].position;
+    out.tangent_light_position10 = tangent_matrix * lights[10].position;
+    out.tangent_light_position11 = tangent_matrix * lights[11].position;
+    out.tangent_light_position12 = tangent_matrix * lights[12].position;
+    out.tangent_light_position13 = tangent_matrix * lights[13].position;
+    out.tangent_light_position14 = tangent_matrix * lights[14].position;
+    out.tangent_light_position15 = tangent_matrix * lights[15].position;
 
     return out;
 }
@@ -171,22 +167,22 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // have zero contribution - which may not be the case if lights are removed and lights uniform 
     // buffer still contains old values instead of being zero'd out.
 
-    result += light_contribution(lights.lights[0], in.tangent_light_position0, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[1], in.tangent_light_position1, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[2], in.tangent_light_position2, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[3], in.tangent_light_position3, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[4], in.tangent_light_position4, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[5], in.tangent_light_position5, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[6], in.tangent_light_position6, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[7], in.tangent_light_position7, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[8], in.tangent_light_position8, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[9], in.tangent_light_position9, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[10], in.tangent_light_position10, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[11], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[12], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[13], in.tangent_light_position13, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[14], in.tangent_light_position14, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights.lights[15], in.tangent_light_position15, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[0], in.tangent_light_position0, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[1], in.tangent_light_position1, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[2], in.tangent_light_position2, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[3], in.tangent_light_position3, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[4], in.tangent_light_position4, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[5], in.tangent_light_position5, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[6], in.tangent_light_position6, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[7], in.tangent_light_position7, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[8], in.tangent_light_position8, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[9], in.tangent_light_position9, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[10], in.tangent_light_position10, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[11], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[12], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[13], in.tangent_light_position13, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[14], in.tangent_light_position14, in.tangent_position, tangent_normal, view_dir);
+    result += light_contribution(lights[15], in.tangent_light_position15, in.tangent_position, tangent_normal, view_dir);
 
     result *= object_color.xyz;
 

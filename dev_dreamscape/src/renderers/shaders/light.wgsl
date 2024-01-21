@@ -14,12 +14,8 @@ struct Light {
     color: vec3<f32>,
 }
 
-struct Lights {
-    lights: array<Light, #MAX_LIGHTS>,
-}
-
 @group(0) @binding(1)
-var<uniform> lights: Lights;
+var<uniform> lights: array<Light, #MAX_LIGHTS>;
 
 struct VertexInput {
     @location(0) position: vec3<f32>,
@@ -37,7 +33,7 @@ fn vs_main(
 ) -> VertexOutput {
     let scale = 0.25;
     var out: VertexOutput;
-    let light = lights.lights[id];
+    let light = lights[id];
     out.clip_position = camera.view_proj * vec4<f32>(model.position * scale + light.position, 1.0);
     out.color = light.color;
     return out;
