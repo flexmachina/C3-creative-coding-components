@@ -105,7 +105,7 @@ pub fn render_to_texture(
         camera,
         light,
         &viewport, 
-        clear, 
+        false,
         clear,
     );
 
