@@ -43,6 +43,27 @@ pub struct App {
     pub render_schedule_label: RenderLabel,
 }
 
+/*
+#[derive(Resource)]
+struct CachedSystemState {
+    world_state: SystemState<(
+            NonSend<'static,Window>,
+            Res<'static,Device>,
+            Res<'static,Assets>,
+            ResMut<'static,Renderers>,
+            //NonSendMut<EventLoop<()>>,
+            ResMut<'static,Input>,
+            EventWriter<'static,WindowResizeEvent>,
+            EventWriter<'static,KeyboardEvent>,
+            EventWriter<'static,MouseEvent>,
+            EventWriter<'static,FrameTimeEvent>,
+            EventWriter<'static,CameraSetEvent>,
+        )>,
+    event_state:
+}
+*/
+
+
 
 impl App {
     pub async fn new(window: Window, webxr: bool) -> Self {
@@ -100,6 +121,7 @@ impl App {
         world.init_resource::<Events<KeyboardEvent>>();
         world.init_resource::<Events<MouseEvent>>();
         world.init_resource::<Events<FrameTimeEvent>>();
+        world.init_resource::<Events<CameraSetEvent>>();
 
         //world.insert_non_send_resource(event_loop);
         world.insert_non_send_resource(window);
@@ -116,6 +138,26 @@ impl App {
         world.insert_resource(FrameTime::new());
         world.insert_resource(Input::new());
         world.insert_resource(PhysicsWorld::new());
+
+        /*
+        let world_systemstate: SystemState<(
+            NonSend<Window>,
+            Res<Device>,
+            Res<Assets>,
+            ResMut<Renderers>,
+            //NonSendMut<EventLoop<()>>,
+            ResMut<Input>,
+            EventWriter<WindowResizeEvent>,
+            EventWriter<KeyboardEvent>,
+            EventWriter<MouseEvent>,
+            EventWriter<FrameTimeEvent>,
+            EventWriter<CameraSetEvent>,
+        )> = SystemState::from_world(&mut world);
+
+        world.insert_resource(CachedWorldSystemState {
+            world_state: world_systemstate 
+        });
+        */
 
 
         let spawn_scene_schedule = new_spawn_scene_schedule();
@@ -226,43 +268,7 @@ impl App {
                 &color_texture, depth_texture,
                 viewport, clear);
 
-        //TODO access renderers and run returned command buffers
 
-        //basically access the skybox and phong renderers and get the command buffers
-        /*
-        let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let depth_view = match depth_texture {
-            Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
-            _ => self.render_state.depth_texture.texture.create_view(&wgpu::TextureViewDescriptor::default())
-        };
-        let command_buffer1 = self.render_state.skybox_pass.draw(
-            &color_view,
-            &depth_view,
-            &self.render_state.device,
-            &self.render_state.queue,
-            &self.scene.nodes,
-            (&self.scene.camera, &self.scene.camera_transform),
-            &self.scene.light,
-            &viewport,
-            clear,
-            clear,
-        );
-        
-        let command_buffer2 = self.render_state.phong_pass.draw(
-            &color_view,
-            &depth_view,
-            &self.render_state.device,
-            &self.render_state.queue,
-            &self.scene.nodes,
-            (&self.scene.camera, &self.scene.camera_transform),
-            &self.scene.light,
-            &viewport,
-            false,
-            clear);
-
-            // submit will accept anything that implements IntoIter
-            self.render_state.queue.submit([command_buffer1, command_buffer2]);
-        */
     }
 
 }

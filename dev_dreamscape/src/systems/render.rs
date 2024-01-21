@@ -78,7 +78,9 @@ pub fn render_to_texture(
     let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
     let depth_view = match depth_texture {
         Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
-        _ => device.depth_tex().view
+        _ => device.depth_tex().texture.create_view(&wgpu::TextureViewDescriptor::default()) 
+            //Error because this returned a reference
+            //device.depth_tex().view
     };
 
 
