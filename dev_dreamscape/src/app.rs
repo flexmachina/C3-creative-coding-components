@@ -13,7 +13,7 @@ use winit::event_loop::{ControlFlow, EventLoop, EventLoopWindowTarget};
 use winit::platform::web::EventLoopExtWebSys;
 
 #[cfg(target_arch="wasm32")]
-use crate::xr::{WebXRApp};
+use crate::xr::WebXRApp;
 
 use winit::window::{WindowBuilder, Window};
 use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent};
@@ -256,7 +256,7 @@ impl App {
             Query<(&Light, &Transform)>,
             Query<&Skybox>,
         )> = SystemState::from_world(&mut self.world);
-        let (device, assets, mut renderers, camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
+        let (device, assets, renderers, camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
                             world_w_queries_systemstate.get_mut(&mut self.world);
         
         render_to_texture(
@@ -367,7 +367,7 @@ pub async fn run_experience(webxr: bool) {
         let mut app = experience.app.borrow_mut();
 
         let (
-            mut window,
+            window,
             _,
             _,
             _,

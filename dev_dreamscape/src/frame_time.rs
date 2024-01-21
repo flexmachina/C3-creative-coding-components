@@ -39,6 +39,6 @@ impl FrameTime {
         self.queue.push_back(raw);
         self.delta = self.queue.iter().copied().sum::<f32>() / self.queue.len() as f32;
 
-        println!("frame time change {}", &self.delta)
+        //println!("frame time change {}", &self.delta)
     }
 }
