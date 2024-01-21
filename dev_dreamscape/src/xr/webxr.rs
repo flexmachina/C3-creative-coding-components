@@ -9,7 +9,8 @@ use js_sys::{Object, Reflect};
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 
-use crate::math::{Mat4, Mat4f, Quat, Vec3f, UnitQuat};
+use crate::math::{Mat4, Mat4f, Quat, Rect, Vec3f, UnitQuat};
+use crate::xr::utils;
 
 
 fn request_animation_frame(session: &XrSession, f: &Closure<dyn FnMut(f64, XrFrame)>) -> u32 {
@@ -149,14 +150,14 @@ impl WebXRApp {
                 }
             };
 
-            let color_texture = crate::utils::create_view_from_device_framebuffer(
+            let color_texture = utils::create_view_from_device_framebuffer(
                 app.device(),
                 framebuffer.clone(),
                 &xr_gl_layer,
                 app.color_format(),
                 "device framebuffer (colour)");
 
-            let depth_texture = crate::utils::create_view_from_device_framebuffer(
+            let depth_texture = utils::create_view_from_device_framebuffer(
                 app.device(),
                 framebuffer,
                 &xr_gl_layer,
@@ -168,7 +169,7 @@ impl WebXRApp {
                 let view: XrView = view.into();
                 let viewport = xr_gl_layer.get_viewport(&view).unwrap();
                 //gl.viewport(viewport.x(), viewport.y(), viewport.width(), viewport.height());
-                let vp = crate::Rect { 
+                let vp = Rect { 
                     x: viewport.x() as f32, 
                     y: viewport.y() as f32, 
                     w: viewport.width() as f32, 

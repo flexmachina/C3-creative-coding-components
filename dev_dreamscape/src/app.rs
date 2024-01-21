@@ -206,21 +206,22 @@ impl App {
         world_systemstate.get_mut(&mut self.world)
     }
 
-
-    fn device(&self) -> &Device {
+    #[allow(dead_code)]
+    pub fn device(&self) -> &Device {
         //let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate_get_mut();
         //&device
         self.world.resource::<Device>()
     }
 
-    fn color_format(&self) -> wgpu::TextureFormat {
+    #[allow(dead_code)]
+    pub fn color_format(&self) -> wgpu::TextureFormat {
         //let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate_get_mut();
         //device.surface_texture_format()
         self.world.resource::<Device>().surface_texture_format()
     }
 
     #[allow(dead_code)]
-    fn update_scene(&mut self, duration: std::time::Duration,
+    pub fn update_scene(&mut self, duration: std::time::Duration,
                     pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
         
         //TODO need to set the time via event
@@ -242,7 +243,8 @@ impl App {
         self.world.run_schedule(update_schedule_label);
     }
 
-    fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
+    #[allow(dead_code)]
+    pub fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
                          viewport: Option<Rect>, clear: bool) {
 
         let mut world_w_queries_systemstate: SystemState<(
