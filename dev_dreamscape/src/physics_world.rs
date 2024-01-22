@@ -88,6 +88,7 @@ impl PhysicsWorld {
         (translation, collider_current_pos)
     }
 
+    #[allow(dead_code)]
     pub fn cast_ray(
         &self,
         from: Vec3f,

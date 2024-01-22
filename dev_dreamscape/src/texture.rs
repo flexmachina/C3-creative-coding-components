@@ -3,7 +3,7 @@ use image::{GenericImageView, RgbaImage};
 use wgpu::{AstcBlock, AstcChannel};
 
 use crate::assets;
-use crate::wgpu_ext::device::{DeviceExt, TextureDataOrder};
+use crate::utils::wgpu_ext::{DeviceExt, TextureDataOrder};
 
 
 pub struct Texture {
@@ -176,13 +176,12 @@ impl Texture {
             depth_or_array_layers: 6,
         };
 
+        /*
         let layer_size = wgpu::Extent3d {
             depth_or_array_layers: 1,
             ..size
         };
         let max_mips = layer_size.max_mips(wgpu::TextureDimension::D2);
-
-        /*
         log::debug!(
             "Copying {:?} skybox images of size {}, {}, 6 with {} mips to gpu",
             format,
@@ -356,7 +355,7 @@ impl Texture {
         texture
     }
 
-
+    #[allow(dead_code)]
     pub fn view(&self) -> &wgpu::TextureView {
         &self.view
     }

@@ -1,5 +1,5 @@
+#[allow(unused_imports)]
 use log::warn;
-use log::error;
 
 
 pub fn init_logging() {

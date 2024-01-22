@@ -1,4 +1,3 @@
-use crate::assets::Assets;
 use bevy_ecs::prelude::*;
 
 
@@ -8,7 +7,7 @@ pub struct Skybox {
 }
 
 impl Skybox {
-    pub fn spawn(mut commands: Commands, assets: Res<Assets>) {
+    pub fn spawn(mut commands: Commands) {
         commands.spawn((
             Skybox {
                 config: "placeholder".to_string()

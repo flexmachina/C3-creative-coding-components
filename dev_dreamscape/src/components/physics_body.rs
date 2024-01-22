@@ -1,5 +1,5 @@
-use crate::components::{Player, Transform};
-use crate::math::{to_point, Vec3f};
+use crate::components::Transform;
+use crate::math::Vec3f;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
@@ -8,7 +8,7 @@ use rapier3d::prelude::*;
 #[derive(Component)]
 pub struct PhysicsBody {
     handle: RigidBodyHandle,
-    movable: bool
+    //movable: bool
 }
 
 pub struct PhysicsBodyParams {
@@ -44,7 +44,7 @@ impl PhysicsBody {
 
         Self {
             handle,
-            movable
+            //movable
         }
     }
 
@@ -90,11 +90,12 @@ impl PhysicsBody {
             body.set_translation(new_pos.coords, true);
         }
     }
-    */
 
     pub fn body_handle(&self) -> RigidBodyHandle {
         self.handle
     }
+    */
+
 }
 
 fn orig_type(movable: bool) -> RigidBodyType {

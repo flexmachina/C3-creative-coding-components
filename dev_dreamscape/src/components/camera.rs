@@ -2,7 +2,7 @@ use rapier3d::na;
 use bevy_ecs::prelude::*;
 #[allow(unused_imports)]
 use log::error;
-use crate::math::{Mat4, Mat4f, Vec3};
+use crate::math::{Mat4, Mat4f};
 use crate::components::Transform;
 
 

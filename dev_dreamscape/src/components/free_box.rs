@@ -1,4 +1,3 @@
-use crate::assets::Assets;
 use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams, Player};
 use crate::components::ModelSpec;
@@ -14,10 +13,9 @@ impl FreeBox {
     pub fn spawn(
         mut commands: Commands,
         mut physics: ResMut<PhysicsWorld>,
-        assets: Res<Assets>,
     ) {
         let pos = Vec3f::y_axis().xyz() * 10.0;
-        commands.spawn(Self::new_components(pos, &mut physics, &assets));
+        commands.spawn(Self::new_components(pos, &mut physics));
     }
 
     pub fn spawn_by_player(
@@ -25,19 +23,17 @@ impl FreeBox {
         mut commands: Commands,
         mut physics: ResMut<PhysicsWorld>,
         input: Res<Input>,
-        assets: Res<Assets>,
     ) {
         if input.space_just_pressed {
             let player_transform = player.single();
             let pos = player_transform.position() + player_transform.forward().xyz() * 5.0;
-            commands.spawn(Self::new_components(pos, &mut physics, &assets));
+            commands.spawn(Self::new_components(pos, &mut physics));
         }
     }
 
     fn new_components(
         pos: Vec3f,
         physics: &mut PhysicsWorld,
-        assets: &Assets,
     ) -> (FreeBox, PhysicsBody, Transform, ModelSpec) {
         let rot = UnitQuatf::identity();
         let scale = Vec3f::from_element(1.0);

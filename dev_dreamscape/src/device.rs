@@ -5,9 +5,6 @@ use crate::texture::Texture;
 pub type SurfaceSize = winit::dpi::PhysicalSize<u32>;
 
 
-#[cfg(target_arch="wasm32")]
-use wasm_bindgen::prelude::*;
-
 #[derive(Resource)]
 pub struct Device {
     surface: wgpu::Surface,
@@ -28,7 +25,7 @@ impl Device {
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
+                power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
             })

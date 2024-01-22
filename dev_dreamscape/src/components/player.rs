@@ -1,8 +1,9 @@
 use std::f32::consts::PI;
+use crate::app::AppState;
 use crate::components::camera::Camera;
 use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
-use crate::events::WindowResizeEvent;
+use crate::events::{WindowResizeEvent, CameraSetEvent};
 use crate::input::Input;
 use crate::math::Vec3f;
 use crate::physics_world::PhysicsWorld;
@@ -12,8 +13,10 @@ use crate::frame_time::FrameTime;
 
 #[derive(Component)]
 pub struct Player {
+    /*
     target_pt: Option<Vec3f>,
     target_body: Option<RigidBodyHandle>,
+    */
     collider_handle: ColliderHandle,
     h_rot_acc: f32,
     v_rot_acc: f32,
@@ -23,6 +26,7 @@ pub struct Player {
 impl Player {
     pub fn spawn(
         device: Res<Device>,
+        appstate: Res<AppState>,
         mut physics: ResMut<PhysicsWorld>,
         mut commands: Commands,
     ) {
@@ -31,7 +35,7 @@ impl Player {
         let znear = 0.1;
         let zfar = 100.0;
         let fov = 45.0;
-        let webxr = false;
+        let webxr = appstate.webxr;
 
         let camera = Camera::new(
             device.surface_size().width as u32,
@@ -50,8 +54,10 @@ impl Player {
         commands.spawn((
             Player {
                 collider_handle,
+                /*
                 target_pt: None,
                 target_body: None,
+                */
                 h_rot_acc: 0.0,
                 v_rot_acc: 0.0,
                 translation_acc: Vec3f::zeros()
@@ -61,12 +67,26 @@ impl Player {
         ));
     }
 
+    /*
     pub fn target_pt(&self) -> Option<Vec3f> {
         self.target_pt
     }
 
     pub fn target_body(&self) -> Option<RigidBodyHandle> {
         self.target_body
+    }
+    */
+
+    //Player isn't moving here, just looking around
+    //(likely in WebXR, so only the view needs to change, no need to change physics)
+    pub fn update_player_view_xr(mut player: Query<(&mut Self, &mut Camera, &mut Transform)>,
+                                mut cameraset_events: EventReader<CameraSetEvent>) {
+
+        if let Some(e) = cameraset_events.iter().last() {
+            let (_, mut camera, mut transform) = player.single_mut();
+            transform.set_pose(e.pos, e.rot);
+            camera.set_projection_matrix(e.projection_matrix);
+        }
     }
 
     pub fn update(
@@ -92,7 +112,7 @@ impl Player {
             player.translate(&mut transform, dt, &input, &mut physics);
         }
 
-        update_target((&mut player, &transform), &physics);
+        //update_target((&mut player, &transform), &physics);
     }
 
     fn translate(
@@ -174,6 +194,7 @@ impl Player {
     }
 }
 
+/*
 fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
     if let Some((hit_pt, _, hit_collider)) = physics.cast_ray(
         player.1.position(),
@@ -192,8 +213,9 @@ fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
         player.0.target_body = None;
     }
 }
+*/
 
-fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, device: &Device) {
+fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, _device: &Device) {
     //camera.Projection.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);
     camera.resize(new_surface_size.width as u32 , new_surface_size.height as u32);
     //TODO handle camera resize!
