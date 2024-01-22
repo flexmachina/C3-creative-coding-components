@@ -41,21 +41,51 @@ struct VertexOutput {
     @location(2) tangent_view_position: vec3<f32>,
 
     @location(3) tangent_light_position0: vec3<f32>,
+#if MAX_LIGHTS > 1
     @location(4) tangent_light_position1: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 2
     @location(5) tangent_light_position2: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 3
     @location(6) tangent_light_position3: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 4
     @location(7) tangent_light_position4: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 5
     @location(8) tangent_light_position5: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 6
     @location(9) tangent_light_position6: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 7
     @location(10) tangent_light_position7: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 8
     @location(11) tangent_light_position8: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 9
     @location(12) tangent_light_position9: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 10
     @location(13) tangent_light_position10: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 11
     @location(14) tangent_light_position11: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 12
     @location(15) tangent_light_position12: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 13
     @location(16) tangent_light_position13: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 14
     @location(17) tangent_light_position14: vec3<f32>,
+#endif
+#if MAX_LIGHTS > 15
     @location(18) tangent_light_position15: vec3<f32>,
+#endif
 }
 
 @vertex
@@ -94,22 +124,51 @@ fn vs_main(
     out.tangent_view_position = tangent_matrix * camera.view_pos.xyz;
 
     out.tangent_light_position0 = tangent_matrix * lights[0].position;
+#if MAX_LIGHTS > 1
     out.tangent_light_position1 = tangent_matrix * lights[1].position;
+#endif
+#if MAX_LIGHTS > 2
     out.tangent_light_position2 = tangent_matrix * lights[2].position;
+#endif
+#if MAX_LIGHTS > 3
     out.tangent_light_position3 = tangent_matrix * lights[3].position;
+#endif
+#if MAX_LIGHTS > 4
     out.tangent_light_position4 = tangent_matrix * lights[4].position;
+#endif
+#if MAX_LIGHTS > 5
     out.tangent_light_position5 = tangent_matrix * lights[5].position;
+#endif
+#if MAX_LIGHTS > 6
     out.tangent_light_position6 = tangent_matrix * lights[6].position;
+#endif
+#if MAX_LIGHTS > 7
     out.tangent_light_position7 = tangent_matrix * lights[7].position;
+#endif
+#if MAX_LIGHTS > 8
     out.tangent_light_position8 = tangent_matrix * lights[8].position;
+#endif
+#if MAX_LIGHTS > 9
     out.tangent_light_position9 = tangent_matrix * lights[9].position;
+#endif
+#if MAX_LIGHTS > 10
     out.tangent_light_position10 = tangent_matrix * lights[10].position;
+#endif
+#if MAX_LIGHTS > 11
     out.tangent_light_position11 = tangent_matrix * lights[11].position;
+#endif
+#if MAX_LIGHTS > 12
     out.tangent_light_position12 = tangent_matrix * lights[12].position;
+#endif
+#if MAX_LIGHTS > 13
     out.tangent_light_position13 = tangent_matrix * lights[13].position;
+#endif
+#if MAX_LIGHTS > 14
     out.tangent_light_position14 = tangent_matrix * lights[14].position;
+#endif
+#if MAX_LIGHTS > 15
     out.tangent_light_position15 = tangent_matrix * lights[15].position;
-
+#endif
     return out;
 }
 
@@ -168,22 +227,52 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     // buffer still contains old values instead of being zero'd out.
 
     result += light_contribution(lights[0], in.tangent_light_position0, in.tangent_position, tangent_normal, view_dir);
+#if MAX_LIGHTS > 1
     result += light_contribution(lights[1], in.tangent_light_position1, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[2], in.tangent_light_position2, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[3], in.tangent_light_position3, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[4], in.tangent_light_position4, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[5], in.tangent_light_position5, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[6], in.tangent_light_position6, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[7], in.tangent_light_position7, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[8], in.tangent_light_position8, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[9], in.tangent_light_position9, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[10], in.tangent_light_position10, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[11], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[12], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[13], in.tangent_light_position13, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[14], in.tangent_light_position14, in.tangent_position, tangent_normal, view_dir);
-    result += light_contribution(lights[15], in.tangent_light_position15, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 2
 
+    result += light_contribution(lights[2], in.tangent_light_position2, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 3
+    result += light_contribution(lights[3], in.tangent_light_position3, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 4
+    result += light_contribution(lights[4], in.tangent_light_position4, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 5
+    result += light_contribution(lights[5], in.tangent_light_position5, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 6
+    result += light_contribution(lights[6], in.tangent_light_position6, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 7
+    result += light_contribution(lights[7], in.tangent_light_position7, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 8
+    result += light_contribution(lights[8], in.tangent_light_position8, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 9
+    result += light_contribution(lights[9], in.tangent_light_position9, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 10
+    result += light_contribution(lights[10], in.tangent_light_position10, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 11
+    result += light_contribution(lights[11], in.tangent_light_position11, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 12
+    result += light_contribution(lights[12], in.tangent_light_position12, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 13
+    result += light_contribution(lights[13], in.tangent_light_position13, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 14
+    result += light_contribution(lights[14], in.tangent_light_position14, in.tangent_position, tangent_normal, view_dir);
+#endif
+#if MAX_LIGHTS > 15
+    result += light_contribution(lights[15], in.tangent_light_position15, in.tangent_position, tangent_normal, view_dir);
+#endif
     result *= object_color.xyz;
 
 #ifdef WEBXR
