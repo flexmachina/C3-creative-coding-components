@@ -70,7 +70,7 @@ impl SkyboxPass {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                     label: Some("Skybox Shader"),
                     source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                        shader_utils::load_shader!(&mut shader_composer, "skybox.wgsl", webxr)
+                        shader_utils::load_shader!(&mut shader_composer, "skybox.wgsl", webxr, None)
                 ))};
                 let shader_module = device.create_shader_module(shader_desc);
 

@@ -1,26 +1,33 @@
+use std::collections::HashMap;
 #[allow(unused_imports)]
 use log::{debug, error, info};
 use naga_oil::compose::{
     ComposableModuleDescriptor, Composer, NagaModuleDescriptor, ShaderDefValue
 };
 
+
 macro_rules! load_shader {
-    ($composer:expr, $path:literal, $webxr:expr) => {{
+    ($composer:expr, $path:literal, $webxr:expr, $shader_defs:expr) => {{
         shader_utils::make_module(
             $composer,
             concat!("shaders/", $path),
             include_str!(concat!("shaders/", $path)), 
-            $webxr)
+            $webxr,
+            $shader_defs)
     }};
 }
 
 pub(crate) use load_shader;
 
-pub fn make_module(composer: &mut Composer, shader_path: &str, shader_source: &str, webxr: bool) -> naga::Module {
+pub fn make_module(
+    composer: &mut Composer,
+    shader_path: &str,
+    shader_source: &str,
+    webxr: bool,
+    shader_defs: Option<HashMap<String, ShaderDefValue>>,
+)  -> naga::Module {
     
-    let mut shader_defs = std::collections::HashMap::new();
-    // TODO: make shader_defs a parameter and don't hardcode MAX_LIGHTS here
-    shader_defs.insert("MAX_LIGHTS".to_string(), ShaderDefValue::Int(16));
+    let mut shader_defs = shader_defs.unwrap_or_default();
     if webxr {
         shader_defs.insert("WEBXR".to_string(),  ShaderDefValue::Bool(true));
     }

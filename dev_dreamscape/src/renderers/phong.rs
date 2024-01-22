@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use naga_oil::compose::ShaderDefValue;
 use wgpu::{BindGroupLayout, Queue};
 
 use crate::{
@@ -299,12 +300,12 @@ impl PhongPass {
         };
 
         let mut shader_composer = shader_utils::init_composer();
-
+        let shader_defs = HashMap::from([("MAX_LIGHTS".to_string(), ShaderDefValue::Int(MAX_LIGHTS as i32))]);
         let phong_render_pipeline = {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                     label: Some("Phong Shader"),
                     source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                        shader_utils::load_shader!(&mut shader_composer, "phong.wgsl", webxr)
+                        shader_utils::load_shader!(&mut shader_composer, "phong.wgsl", webxr, Some(shader_defs.clone()))
                 ))};
                 let shader_module = device.create_shader_module(shader_desc);
 
@@ -339,7 +340,7 @@ impl PhongPass {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                 label: Some("Light Shader"),
                 source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                    shader_utils::load_shader!(&mut shader_composer, "light.wgsl", webxr)
+                    shader_utils::load_shader!(&mut shader_composer, "light.wgsl", webxr, Some(shader_defs.clone()))
                 ))
             };
             let shader_module = device.create_shader_module(shader_desc);
