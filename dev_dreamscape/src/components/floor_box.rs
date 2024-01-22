@@ -1,4 +1,3 @@
-use crate::assets::Assets;
 use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams};
 use crate::components::ModelSpec;
@@ -13,7 +12,6 @@ impl FloorBox {
     pub fn spawn(
         mut commands: Commands,
         mut physics: ResMut<PhysicsWorld>,
-        assets: Res<Assets>,
     ) {
         let modelspec = ModelSpec::new(String::from("cube.obj"));
 

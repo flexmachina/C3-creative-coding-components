@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use crate::math::Rect;
-use crate::components::{Camera, Skybox, Transform, Player, ModelSpec, Light};
+use crate::components::{Camera, Transform, Player, ModelSpec, Light};
 use crate::assets::{Assets,Renderers};
-use crate::app::{AppState};
+use crate::app::AppState;
 use crate::model::Model;
 use crate::renderers::{SkyboxPass, PhongConfig, PhongPass};
 
@@ -16,7 +16,6 @@ pub fn prepare_render_pipelines(
     assets: Res<Assets>,
     appstate: Res<AppState>,
     mut renderers: ResMut<Renderers>,
-    mut commands: Commands,
 ) {
     let webxr = appstate.webxr;
     renderers.skybox_renderer = Some(SkyboxPass::new(
@@ -36,16 +35,17 @@ pub fn prepare_render_pipelines(
 
 
 pub fn render_to_texture(
-                device: Res<Device>,
+                device: &Device,
                 assets: Res<Assets>,
                 mut renderers: ResMut<Renderers>,
                 camera_qry: Query<(&Camera, &Transform), With<Player>>,
                 meshes_qry: Query<(&ModelSpec, &Transform)>,
                 light_qry: Query<(&Light, &Transform)>,
-                skyboxes_qry: Query<&Skybox>,
-                                         
-                color_texture: &wgpu::Texture, depth_texture: Option<&wgpu::Texture>,
-                viewport: Option<Rect>, clear: bool) {
+                //                                         
+                color_texture: &wgpu::Texture,
+                depth_texture: Option<&wgpu::Texture>,
+                viewport: Option<Rect>,
+                clear: bool) {
 
     let camera = camera_qry.single();
     let light = light_qry.single();
@@ -85,6 +85,7 @@ pub fn render_to_texture(
 
 
     // Skypass pass
+    // TODO: Use Skybox Query to make skybox config dynamic
     let skybox_renderer = renderers.skybox_renderer.as_mut().unwrap();
     let skybox_cmd_buffer = skybox_renderer.draw(
         &color_view,
@@ -117,24 +118,25 @@ pub fn render_to_texture(
 pub fn render(
     device: Res<Device>,
     assets: Res<Assets>,
-    mut renderers: ResMut<Renderers>,
+    renderers: ResMut<Renderers>,
     camera_qry: Query<(&Camera, &Transform), With<Player>>,
     meshes_qry: Query<(&ModelSpec, &Transform)>,
     light_qry: Query<(&Light, &Transform)>,
-    skyboxes_qry: Query<&Skybox>,
 ) {
     let surface = device.surface(); 
     let surface_texture = surface.get_current_texture().unwrap();
+    
     render_to_texture(
-                bevy_ecs::change_detection::Res::<'_, Device>::clone(&device),
+                &device,
                 assets,
                 renderers,
                 camera_qry,
                 meshes_qry,
                 light_qry,
-                skyboxes_qry,              
                 &surface_texture.texture,
                 None,
-                None, true);
+                None,
+                true);
+
     surface_texture.present();
 }

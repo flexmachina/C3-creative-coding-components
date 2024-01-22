@@ -18,7 +18,7 @@ use crate::renderers::{PhongPass, SkyboxPass};
 fn format_url(file_name: &str) -> reqwest::Url {
     let window = web_sys::window().unwrap();
     let location = window.location();
-    let mut origin = location.origin().unwrap();
+    let origin = location.origin().unwrap();
     //if !origin.ends_with("learn-wgpu") {
     //    origin = format!("{}/learn-wgpu", origin);
     //}
@@ -292,8 +292,7 @@ pub struct Renderers {
 }
 
 impl Renderers {
-    pub fn init(device: &Device) -> Self {
-        printlog("In assets.load_and_return");
+    pub fn init() -> Self {
         Self {
             skybox_renderer: None, 
             phong_renderer: None

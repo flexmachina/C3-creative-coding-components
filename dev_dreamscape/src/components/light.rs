@@ -1,7 +1,6 @@
 use bevy_ecs::prelude::*;
 use crate::components::Transform;
 
-use crate::assets::Assets;
 use crate::math::Vec3f;
 
 
@@ -11,7 +10,7 @@ pub struct Light {
 }
 
 impl Light {
-    pub fn spawn(mut commands: Commands, assets: Res<Assets>) {
+    pub fn spawn(mut commands: Commands) {
         commands.spawn((
             Light {
                 color: Vec3f::new(1., 1., 1.)

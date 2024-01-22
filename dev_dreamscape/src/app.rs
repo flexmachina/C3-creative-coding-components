@@ -2,7 +2,7 @@ use crate::device::{Device, SurfaceSize};
 use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent,
                     FrameTimeEvent, CameraSetEvent};
 use crate::frame_time::FrameTime;
-use crate::math::{Rect, Vec3f, UnitQuatf, Mat4f };
+use crate::math::{Rect, Vec3f, UnitQuatf, Mat4f};
 use crate::input::Input;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
@@ -20,7 +20,7 @@ use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent}
 
 use crate::systems::*;
 use crate::assets::{Assets, Renderers};
-use crate::components::{Camera,Transform,Light,Skybox,ModelSpec,Player};
+use crate::components::{Camera,Transform,Light,ModelSpec,Player};
 
 use crate::logging::{init_logging, printlog};
 
@@ -114,7 +114,7 @@ impl App {
             Assets::load_and_return(&device).await
         });
         */
-        let renderers = Renderers::init(&device);
+        let renderers = Renderers::init();
         printlog("running init_app - done loading assets outside schedule");
 
         world.init_resource::<Events<WindowResizeEvent>>();
@@ -254,21 +254,21 @@ impl App {
             Query<(&Camera, &Transform), With<Player>>,
             Query<(&ModelSpec, &Transform)>,
             Query<(&Light, &Transform)>,
-            Query<&Skybox>,
         )> = SystemState::from_world(&mut self.world);
-        let (device, assets, renderers, camera_qry,meshes_qry,light_qry,skyboxes_qry) = 
+        let (device, assets, renderers, camera_qry,meshes_qry,light_qry) = 
                             world_w_queries_systemstate.get_mut(&mut self.world);
         
         render_to_texture(
-                device,
+                &device,
                 assets,
                 renderers,
                 camera_qry,
                 meshes_qry,
                 light_qry,
-                skyboxes_qry,              
-                &color_texture, depth_texture,
-                viewport, clear);
+                &color_texture,
+                depth_texture,
+                viewport,
+                clear);
 
 
     }

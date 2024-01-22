@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use rapier3d::na;
 use bevy_ecs::prelude::*;
 use crate::math::{Mat4, Mat4f, Vec3, Vec3f, Quatf, UnitQuat, UnitQuatf, UnitVec3f};

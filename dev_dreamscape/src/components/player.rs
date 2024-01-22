@@ -1,5 +1,5 @@
 use std::f32::consts::PI;
-use crate::app::{AppState};
+use crate::app::AppState;
 use crate::components::camera::Camera;
 use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
@@ -83,7 +83,7 @@ impl Player {
                                 mut cameraset_events: EventReader<CameraSetEvent>) {
 
         if let Some(e) = cameraset_events.iter().last() {
-            let (mut player, mut camera, mut transform) = player.single_mut();
+            let (_, mut camera, mut transform) = player.single_mut();
             transform.set_pose(e.pos, e.rot);
             camera.set_projection_matrix(e.projection_matrix);
         }
@@ -215,7 +215,7 @@ fn update_target(player: (&mut Player, &Transform), physics: &PhysicsWorld) {
 }
 */
 
-fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, device: &Device) {
+fn update_cam_aspect(camera: &mut Camera, new_surface_size: SurfaceSize, _device: &Device) {
     //camera.Projection.set_aspect(new_surface_size.width as f32 / new_surface_size.height as f32);
     camera.resize(new_surface_size.width as u32 , new_surface_size.height as u32);
     //TODO handle camera resize!
