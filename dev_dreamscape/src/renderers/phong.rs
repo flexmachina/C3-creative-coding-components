@@ -19,7 +19,7 @@ use super::{
 };
 
 
-const MAX_LIGHTS: u64 = 16;
+const MAX_LIGHTS: u64 = 10;
 
 #[repr(C)]
 #[derive(Copy, Clone, Default, bytemuck::Pod, bytemuck::Zeroable)]
