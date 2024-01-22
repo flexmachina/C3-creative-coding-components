@@ -15,7 +15,7 @@ impl FloorBox {
     ) {
         let modelspec = ModelSpec::new(String::from("cube.obj"));
 
-        let pos = Vec3f::from_element(0.0);
+        let pos = Vec3f::new(0.0, -1., 0.0);
         let rot = UnitQuatf::identity();
         let scale = Vec3f::new(100.0, 0.5, 100.0);
         let transform = Transform::new(pos, rot, scale);

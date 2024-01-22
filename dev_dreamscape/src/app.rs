@@ -221,17 +221,10 @@ impl App {
     }
 
     #[allow(dead_code)]
-    pub fn update_scene(&mut self, duration: std::time::Duration,
-                    pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
-        
+    pub fn update_scene(&mut self, duration: std::time::Duration) {
         //TODO need to set the time via event
-        let (_,_,_,_,_,_,_,_,mut frametime_events, mut cameraset_events) = 
+        let (_,_,_,_,_,_,_,_,mut frametime_events, _) = 
                             self.world_systemstate_get_mut();
-        cameraset_events.send(CameraSetEvent {
-            pos,
-            rot,
-            projection_matrix
-        });
         frametime_events.send(FrameTimeEvent {
             duration,
         });
@@ -241,6 +234,17 @@ impl App {
         self.world.run_schedule(spawn_scene_schedule_label);
         self.world.run_schedule(preupdate_schedule_label);
         self.world.run_schedule(update_schedule_label);
+    }
+
+    #[allow(dead_code)]
+    pub fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
+        let (_,_,_,_,_,_,_,_,_, mut cameraset_events) = 
+                            self.world_systemstate_get_mut();
+        cameraset_events.send(CameraSetEvent {
+            pos,
+            rot,
+            projection_matrix
+        });
     }
 
     #[allow(dead_code)]
@@ -425,12 +429,18 @@ pub async fn run_experience(webxr: bool) {
                 }
 
                 WindowEvent::Resized(new_size) => {
+                    if webxr {
+                        return;
+                    }    
                     resize_events.send(WindowResizeEvent {
                         new_size: *new_size,
                     });
                 }
 
                 WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                    if webxr {
+                        return;
+                    }    
                     resize_events.send(WindowResizeEvent {
                         new_size: **new_inner_size,
                     });
@@ -441,6 +451,10 @@ pub async fn run_experience(webxr: bool) {
 
 
             Event::RedrawRequested(window_id) if window_id == window.id() => {
+                if webxr {
+                    return;
+                }
+                 
                 let spawn_scene_schedule_label = app.spawn_scene_schedule_label.clone();
                 let preupdate_schedule_label = app.preupdate_schedule_label.clone();
                 let update_schedule_label = app.update_schedule_label.clone();
@@ -455,6 +469,9 @@ pub async fn run_experience(webxr: bool) {
             Event::RedrawEventsCleared => {
                 // RedrawRequested will only trigger once, unless we manually
                 // request it.
+                if webxr {
+                    return;
+                }
                 window.request_redraw();
             },
 

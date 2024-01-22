@@ -164,6 +164,11 @@ impl WebXRApp {
                 crate::texture::Texture::DEPTH_FORMAT,
                 "device framebuffer (depth)");
         
+            let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
+            last_frame_time.replace(time);
+            // Callback
+            app.update_scene(delta_time);
+
             let viewer_pose = frame.get_viewer_pose(&ref_space).unwrap();
             for (view_idx, view) in viewer_pose.views().iter().enumerate() {
                 let view: XrView = view.into();
@@ -183,10 +188,8 @@ impl WebXRApp {
                 let rotation = Quat::new(r.w() as f32, r.x() as f32, r.y() as f32, r.z() as f32);
                 let rotation = UnitQuat::new_normalize(rotation);
 
-                let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
-                last_frame_time.replace(time);
-                // Callback
-                app.update_scene(delta_time, position, rotation, to_mat(&view.projection_matrix())  );
+                // Callback - Set camera to XrView pose 
+                app.update_camera(position, rotation, to_mat(&view.projection_matrix()));
 
                 // Each view is rendered to a different region of the same framebuffer,
                 // so only clear the framebuffer once before the first render pass.

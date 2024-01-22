@@ -13,11 +13,10 @@ mod model;
 mod texture;
 mod utils;
 mod renderers;
-
-
 #[cfg(target_arch="wasm32")]
 mod xr;
 
+use cfg_if::cfg_if;
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -25,8 +24,14 @@ use wasm_bindgen::prelude::*;
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
 pub async fn run() {
 
-    const XR_MODE: bool = true;
-    crate::app::run_experience(XR_MODE).await
+    cfg_if! {
+        if #[cfg(target_arch = "wasm32")] {
+            const XR_MODE: bool = true;
+            crate::app::run_experience(XR_MODE).await
+        } else {
+            crate::app::run_experience(false).await
+        }
+    }
 
     /*
     #[cfg(not(target_arch = "wasm32"))]
