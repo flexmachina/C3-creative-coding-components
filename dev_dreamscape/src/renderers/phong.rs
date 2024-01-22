@@ -413,7 +413,7 @@ impl PhongPass {
         clear_depth: bool
     ) -> wgpu::CommandBuffer {
 
-        assert!(lights.len() < MAX_LIGHTS as usize);
+        assert!(lights.len() <= MAX_LIGHTS as usize);
 
         let lights_data = lights
             .iter()
