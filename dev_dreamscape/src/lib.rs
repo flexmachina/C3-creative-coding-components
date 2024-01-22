@@ -25,7 +25,7 @@ use wasm_bindgen::prelude::*;
 #[cfg_attr(target_arch="wasm32", wasm_bindgen(start))]
 pub async fn run() {
 
-    const XR_MODE: bool = false;
+    const XR_MODE: bool = true;
     crate::app::run_experience(XR_MODE).await
 
     /*
