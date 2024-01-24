@@ -40,3 +40,12 @@ WASM based tools for creative coders to generate 3D & XR art experiences
 ## Learning resources - Gaussian Splatting
 - [https://arxiv.org/abs/2308.04079](Gaussian Splatting paper)
 - [https://www.thomasantony.com/posts/gaussian-splatting-renderer/](Understanding 3D Gaussian Splats by writing a software renderer)
+
+
+## Assets ([CC Licence](https://creativecommons.org/licenses/by/4.0/))
+- [Crater City - Terrain](https://sketchfab.com/3d-models/crater-city-terrain-0bdacc08da824abda64701698dd5cdd1)
+- [Alien planet surface landscape with craters](https://sketchfab.com/3d-models/alien-planet-surface-landscape-with-craters-653797d4ae4749f4aa02c721d7d6596e)
+- [A Rock](https://sketchfab.com/3d-models/a-rock-c49139dbab5e4c498c225b56cca30466)
+- [Red Rock Photo-scan Gameready](https://sketchfab.com/3d-models/red-rock-photo-scan-gameready-66b9ecc1a1a14a2e8e7234e9363b7360)
+
+
