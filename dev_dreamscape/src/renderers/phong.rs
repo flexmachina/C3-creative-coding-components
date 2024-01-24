@@ -65,13 +65,13 @@ pub struct PhongPass {
     pub camera_buffer: wgpu::Buffer,
     pub light_buffer: wgpu::Buffer,
     // Instances
-    //instance_buffers: HashMap<usize, wgpu::Buffer>,
     instance_buffer: wgpu::Buffer,
     // Phong pipeline
     pub phong_global_bind_group_layout: BindGroupLayout,
     pub phong_global_bind_group: wgpu::BindGroup,
     pub phong_local_bind_group_layout: BindGroupLayout,
-    phong_local_bind_groups: HashMap<usize, wgpu::BindGroup>,
+    // TODO: make ModelSpec / Material spec the key
+    phong_local_bind_groups: HashMap<String, wgpu::BindGroup>,
     pub phong_render_pipeline: wgpu::RenderPipeline,
     // Light pipeline
     pub light_global_bind_group_layout: BindGroupLayout,
@@ -404,7 +404,7 @@ impl PhongPass {
         depth_view: &wgpu::TextureView,
         device: &Device,
         queue: &Queue,
-        nodes: &Vec<(&Model, Vec<&Transform>)>,
+        nodes: &Vec<(&Model, &String, Vec<&Transform>)>,
         camera: (&Camera, &Transform),
         lights: &Vec<(&Light, &Transform)>,
         light_model: &Model,
@@ -474,13 +474,12 @@ impl PhongPass {
             // (can prob wrap in block instead to limit mutable use)
 
             let mut max_num_tansforms = 0;
-            for (model_index, node) in nodes.iter().enumerate() {
-                let (model, transforms) = node;
+            for (model, modelname, transforms) in nodes.iter() {
                 // We create a bind group for each model's local uniform data
                 // and store it in a hash map to look up later
                 let phong_local_bind_group_layout = &self.phong_local_bind_group_layout;
                 self.phong_local_bind_groups
-                    .entry(model_index)
+                    .entry(modelname.to_string())
                     .or_insert_with(|| {
                         device.create_bind_group(&wgpu::BindGroupDescriptor {
                             label: Some("[Phong] Locals"),
@@ -532,9 +531,7 @@ impl PhongPass {
             render_pass.set_bind_group(0, &self.phong_global_bind_group, &[]);
 
             // Draw all node models
-            for (model_index, node) in nodes.iter().enumerate() {
-                let (model, transforms) = node;
-
+            for (model, modelname, transforms) in nodes.iter() {
                 let instance_data = transforms.iter().map(instance::instance_raw).collect::<Vec<_>>();
                 queue.write_buffer(
                     &self.instance_buffer,
@@ -543,11 +540,11 @@ impl PhongPass {
                 );
 
                 render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-                render_pass.set_bind_group(1, &self.phong_local_bind_groups[&model_index], &[]);
+                render_pass.set_bind_group(1, &self.phong_local_bind_groups[*modelname], &[]);
                 // Draw all the model instances
                 render_pass.draw_model_instanced(
                     &model,
-                    0..*&transforms.len() as u32
+                    0..transforms.len() as u32
                 );
             }
         }

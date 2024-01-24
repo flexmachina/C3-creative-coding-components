@@ -63,10 +63,10 @@ pub fn render_to_texture(
     }
 
     // Lookup Model from ModelSpec and flatten to vector
-    let mut nodes: Vec<(&Model, Vec<&Transform>)> = vec![];
+    let mut nodes: Vec<(&Model, &String, Vec<&Transform>)> = vec![];
     for (modelname, transforms) in instances.into_iter() {
         let model =  assets.model_store.get(modelname).unwrap();
-        nodes.push((model, transforms));
+        nodes.push((model, modelname, transforms));
     }
 
     // Gather light models
