@@ -266,8 +266,13 @@ impl Assets {
         let obj_model: model::Model =
             load_model("cube.obj", &device, &device.queue()).await.unwrap();
 
+
+        let floor_obj_model: model::Model =
+            load_model("moon_surface.obj", &device, &device.queue()).await.unwrap();
+
         let model_store = HashMap::from_iter([
-                                        ("cube.obj".to_string(), obj_model)
+                                        ("cube.obj".to_string(), obj_model),
+                                        ("moon_surface.obj".to_string(), floor_obj_model),
                                     ]);
 
         let skybox_tex = 

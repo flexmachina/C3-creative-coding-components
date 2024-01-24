@@ -13,11 +13,12 @@ impl FloorBox {
         mut commands: Commands,
         mut physics: ResMut<PhysicsWorld>,
     ) {
-        let modelspec = ModelSpec::new(String::from("cube.obj"));
+        let modelspec = ModelSpec::new(String::from("moon_surface.obj"));
 
         let pos = Vec3f::new(0.0, -1., 0.0);
         let rot = UnitQuatf::identity();
-        let scale = Vec3f::new(100.0, 0.5, 100.0);
+        //let scale = Vec3f::new(100.0, 0.5, 100.0);
+        let scale = Vec3f::new(1.0, 1.0, 1.0);
         let transform = Transform::new(pos, rot, scale);
 
         let physics_body = PhysicsBody::new(
