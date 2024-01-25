@@ -75,7 +75,7 @@ pub fn render_to_texture(
         lights.push((light, transform));
     }
     // TODO: don't hardcode. We rely on the same mode for all lights for instancing atm.
-    let light_model = assets.model_store.get("cube.obj").unwrap();
+    let light_model = assets.model_store.get("sphere.obj").unwrap();
 
     //
     // Render passes
