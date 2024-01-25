@@ -26,15 +26,17 @@ WASM based tools for creative coders to generate 3D & XR art experiences
     - Audio controller ⏹️
 
 # Credits 
+
+## Code & Tutorials
 - [learn-wgpu](https://sotrh.github.io/learn-wgpu/)
 - [wgpu-demo](https://github.com/0xc0dec/wgpu-demo)
-
-
-
-# Useful learning resources
-- *[WebGPU Fundamentals](https://webgpufundamentals.org/)*
 - [From 0 to glTF with WebGPU](https://www.willusher.io/graphics/2023/04/10/0-to-gltf-triangle)
+- [GLTF Animations in wgpu and Rust](https://whoisryosuke.com/blog/2022/importing-gltf-with-wgpu-and-rust)
+
+## Other Learning resources
+- *[WebGPU Fundamentals](https://webgpufundamentals.org/)*
 - [Render Pipelines in wgpu and Rust](https://whoisryosuke.com/blog/2022/render-pipelines-in-wgpu-and-rust)
 
-# Useful learning resources - Gaussian Splatting
+## Learning resources - Gaussian Splatting
+- [https://arxiv.org/abs/2308.04079](Gaussian Splatting paper)
 - [https://www.thomasantony.com/posts/gaussian-splatting-renderer/](Understanding 3D Gaussian Splats by writing a software renderer)
