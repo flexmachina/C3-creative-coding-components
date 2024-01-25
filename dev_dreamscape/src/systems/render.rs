@@ -57,9 +57,9 @@ pub fn render_to_texture(
     // TODO: use ModelSpec as key?
     let mut instances: HashMap<&String, Vec<&Transform>> = HashMap::new();        
     for (model_spec, transform) in meshes_qry.iter() {
-            instances.entry(&model_spec.modelname)
-                .or_insert_with(Vec::new)
-                .push(transform);                    
+        instances.entry(&model_spec.modelname)
+            .or_insert_with(Vec::new)
+            .push(transform);
     }
 
     // Lookup Model from ModelSpec and flatten to vector
