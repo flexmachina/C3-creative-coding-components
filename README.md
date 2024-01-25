@@ -35,3 +35,6 @@ WASM based tools for creative coders to generate 3D & XR art experiences
 - *[WebGPU Fundamentals](https://webgpufundamentals.org/)*
 - [From 0 to glTF with WebGPU](https://www.willusher.io/graphics/2023/04/10/0-to-gltf-triangle)
 - [Render Pipelines in wgpu and Rust](https://whoisryosuke.com/blog/2022/render-pipelines-in-wgpu-and-rust)
+
+# Useful learning resources - Gaussian Splatting
+- [https://www.thomasantony.com/posts/gaussian-splatting-renderer/](Understanding 3D Gaussian Splats by writing a software renderer)
