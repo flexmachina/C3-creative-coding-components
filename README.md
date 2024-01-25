@@ -3,23 +3,23 @@ WASM based tools for creative coders to generate 3D & XR art experiences
 
 # Status
 - Platforms
-    - Desktop (using winit) ☑️  
-    - Web (via WASM) ☑️
-    - WebXR (via WASM, tested on Quest 3) ☑️
+    - Desktop (using winit) ✅ 
+    - Web (via WASM) ✅
+    - WebXR (via WASM, tested on Quest 3) ✅
 - Asset import
-    - Wavefront .obj ☑️
-    - Skyboxes (cubemap pngs) ☑️
+    - Wavefront .obj ✅
+    - Skyboxes (cubemap pngs) ✅
     - Gaussian Splat ⏹️
     - glTF ⏹️
-- Entity-Component-System (ECS) world modeling (via Bevy-ECS) ☑️
-- Physics (via Rapier3D) ☑️
+- Entity-Component-System (ECS) world modeling (via Bevy-ECS) ✅
+- Physics (via Rapier3D) ✅
 - Renderers
-    - Skybox renderer ☑️
-    - Phong shader ☑️
+    - Skybox renderer ✅
+    - Phong shader ✅
     - Gaussian Splat renderer ⏹️
 - Controller input
-    - Desktop (using winit) ☑️
-    - Web (using winit) ☑️
+    - Desktop (using winit) ✅
+    - Web (using winit) ✅
     - WebXR (via WebXR API) ⏹️
 - Audio
     - Audio import ⏹️ 
