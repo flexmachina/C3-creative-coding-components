@@ -1,6 +1,6 @@
 use anyhow::*;
 use image::{GenericImageView, RgbaImage};
-use wgpu::{AstcBlock, AstcChannel};
+use wgpu::{AstcBlock, AstcChannel, Extent3d};
 
 use crate::assets;
 use crate::utils::wgpu_ext::{DeviceExt, TextureDataOrder};
@@ -358,5 +358,29 @@ impl Texture {
     #[allow(dead_code)]
     pub fn view(&self) -> &wgpu::TextureView {
         &self.view
+    }
+
+    // Create null texture so shaders doesn't barf
+    pub fn default(device: &wgpu::Device, _queue: &wgpu::Queue) -> Self {
+        // TODO: write 1x2 gray texture instead empty buffer?
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Default"),
+            size: Extent3d{width: 1, height:1, depth_or_array_layers: 1},
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            ..Default::default()
+        });
+        Self {
+            texture,
+            view,
+            sampler
+        }
     }
 }

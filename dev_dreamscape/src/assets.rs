@@ -7,6 +7,7 @@ use std::io::{BufReader, Cursor};
 use std::collections::HashMap;
 
 use crate::device::Device;
+use crate::texture::Texture;
 use crate::{model, texture};
 use crate::math::{Vec2, Vec3};
 
@@ -225,6 +226,12 @@ pub async fn load_model(
         })
         .collect::<Vec<_>>();
 
+    if materials.len() == 0 {
+        materials.push(model::Material::new(
+            "Default",
+            Texture::default(device, queue),
+            Texture::default(device, queue)));
+    }
     Ok(model::Model { meshes, materials })
 }
 
@@ -248,32 +255,17 @@ impl Assets {
     pub async fn load_and_return(device: &Device) -> Self {
         printlog("In assets.load_and_return");
 
-        /*
-        let (skybox_tex, stone_tex) = pollster::block_on(async {
-            printlog("In assets.load - pollster async function");
-            let skybox_tex = Texture::new_cube_from_file("skybox_bgra.dds", device)
-                .await
-                .unwrap();
-            printlog("In assets.load - loaded skybox");
-            let stone_tex = Texture::new_2d_from_file("stonewall.jpg", device)
-                .await
-                .unwrap();
-            (skybox_tex, stone_tex)
-        });
-        */
+        let model_paths = vec![
+            "cube.obj",
+            "sphere.obj",
+            "moon_surface.obj"
+        ];
 
-
-        let obj_model: model::Model =
-            load_model("cube.obj", &device, &device.queue()).await.unwrap();
-
-
-        let floor_obj_model: model::Model =
-            load_model("moon_surface.obj", &device, &device.queue()).await.unwrap();
-
-        let model_store = HashMap::from_iter([
-                                        ("cube.obj".to_string(), obj_model),
-                                        ("moon_surface.obj".to_string(), floor_obj_model),
-                                    ]);
+        let mut model_store = HashMap::new();
+        for model_path in model_paths {
+            let model = load_model(model_path, &device, &device.queue()).await.unwrap();
+            model_store.insert(model_path.to_string(), model);
+        }
 
         let skybox_tex = 
             texture::Texture::load_cubemap_from_pngs(

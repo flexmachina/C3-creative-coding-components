@@ -64,13 +64,14 @@ pub struct PhongPass {
     // Common uniform buffers
     pub camera_buffer: wgpu::Buffer,
     pub light_buffer: wgpu::Buffer,
-    // Instances
-    instance_buffer: wgpu::Buffer,
+    // Instance buffer pool - keyed by node index
+    instance_buffers: HashMap<usize, wgpu::Buffer>,
     // Phong pipeline
     pub phong_global_bind_group_layout: BindGroupLayout,
     pub phong_global_bind_group: wgpu::BindGroup,
     pub phong_local_bind_group_layout: BindGroupLayout,
-    // TODO: make ModelSpec / Material spec the key
+    // Bind groups - keyed by model
+    // TODO: make ModelSpec / Material id the key
     phong_local_bind_groups: HashMap<String, wgpu::BindGroup>,
     pub phong_render_pipeline: wgpu::RenderPipeline,
     // Light pipeline
@@ -372,19 +373,10 @@ impl PhongPass {
             })
         };
 
-         // Create instance buffer initially for a single transform
-         // This will be resized if needed in draw()
-        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Instance Buffer"),
-            size: std::mem::size_of::<InstanceRaw>() as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false
-        });
-
         PhongPass {
             camera_buffer,
             light_buffer,
-            instance_buffer,
+            instance_buffers: Default::default(),
 
             phong_global_bind_group_layout,
             phong_global_bind_group,
@@ -468,15 +460,21 @@ impl PhongPass {
                 _ => {}
             };
 
-            // Loop over the nodes/models in a scene and setup the specific models
-            // local uniform bind group and instance buffers to send to shader
+            let instance_size = std::mem::size_of::<InstanceRaw>() as wgpu::BufferAddress;
+
+            // Loop over the nodes  and setup model specific bind groups and 
+            // instance buffers per node to send to shader
             // This is separate loop from the render because of Rust ownership
             // (can prob wrap in block instead to limit mutable use)
-
-            let mut max_num_tansforms = 0;
-            for (model, modelname, transforms) in nodes.iter() {
+            for (model_index, (model, modelname, transforms)) in nodes.iter().enumerate() {
                 // We create a bind group for each model's local uniform data
                 // and store it in a hash map to look up later
+                
+                //
+                // Bindgroup  management
+
+                // Bindgroups are indexed by modelname as we currently assume models have a fixed material
+                // (ideally we should index by a Material id)
                 let phong_local_bind_group_layout = &self.phong_local_bind_group_layout;
                 self.phong_local_bind_groups
                     .entry(modelname.to_string())
@@ -501,21 +499,43 @@ impl PhongPass {
                         })
                     });
                 
-                max_num_tansforms = std::cmp::max(max_num_tansforms, transforms.len());
-            }
+                //
+                // Instance buffer management
+                //
 
-            // Resize instance buffer if needed
-            let required_instance_buffer_size = (max_num_tansforms * std::mem::size_of::<InstanceRaw>()) as u64;
-            if self.instance_buffer.size() < required_instance_buffer_size as u64 {
-                // Reallocate global instance buffer
-                self.instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                // Instance buffers are indexed by node, as we need a separate instance buffer per node.
+                // We could just use a Vec, but then we'd have to manage resizing it.
+                // The Hasmap takes care of this for us
+                // TODO: Should be shrink the HashMap and contained buffers in a cleanup routine? e.g.
+                // when changing scenes
+                let required_instance_buffer_size = instance_size * transforms.len() as u64;
+
+                let create_buffer = || device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Instance Buffer"),
-                    size: required_instance_buffer_size,
+                    size:  required_instance_buffer_size,
                     usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false
                 });
-            }
 
+                // Get instance buffer keyed by model or create one if it doesn't exist 
+                let instance_buffer = self.instance_buffers
+                    .entry(model_index)
+                    .or_insert_with(|| {
+                        create_buffer()
+                    });
+                // Reallocate the instance buffer if it's too small
+                if instance_buffer.size() < required_instance_buffer_size as u64 {
+                    // Reallocate global instance buffer
+                    *instance_buffer = create_buffer();
+                }
+                // Write to the instance buffer
+                let instance_data = transforms.iter().map(instance::instance_raw).collect::<Vec<_>>();
+                queue.write_buffer(
+                    &instance_buffer,
+                    0,
+                    bytemuck::cast_slice(&instance_data),
+                );
+            }
                         
             // Setup lighting pipeline
             render_pass.set_pipeline(&self.light_render_pipeline);    
@@ -531,15 +551,13 @@ impl PhongPass {
             render_pass.set_bind_group(0, &self.phong_global_bind_group, &[]);
 
             // Draw all node models
-            for (model, modelname, transforms) in nodes.iter() {
-                let instance_data = transforms.iter().map(instance::instance_raw).collect::<Vec<_>>();
-                queue.write_buffer(
-                    &self.instance_buffer,
-                    0,
-                    bytemuck::cast_slice(&instance_data),
-                );
-
-                render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+            for (model_index, (model, modelname, transforms)) in nodes.iter().enumerate() {
+                let required_instance_buffer_size = instance_size * transforms.len() as u64;
+                let instance_buffer = self.instance_buffers.get(&model_index).unwrap();
+                // It looks like we don't need to limit the bounds of the instance buffer slice,
+                // (probably because instance range passed to draw_model_instanced defines how much of the 
+                // buffer is read, but doing it anyway for sanity purposes.
+                render_pass.set_vertex_buffer(1, instance_buffer.slice(0..required_instance_buffer_size));
                 render_pass.set_bind_group(1, &self.phong_local_bind_groups[*modelname], &[]);
                 // Draw all the model instances
                 render_pass.draw_model_instanced(

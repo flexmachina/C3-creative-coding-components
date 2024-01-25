@@ -57,9 +57,9 @@ pub fn render_to_texture(
     // TODO: use ModelSpec as key?
     let mut instances: HashMap<&String, Vec<&Transform>> = HashMap::new();        
     for (model_spec, transform) in meshes_qry.iter() {
-            instances.entry(&model_spec.modelname)
-                .or_insert_with(Vec::new)
-                .push(transform);                    
+        instances.entry(&model_spec.modelname)
+            .or_insert_with(Vec::new)
+            .push(transform);
     }
 
     println!("instances hashmap: {:?}",instances);
@@ -80,7 +80,7 @@ pub fn render_to_texture(
         lights.push((light, transform));
     }
     // TODO: don't hardcode. We rely on the same mode for all lights for instancing atm.
-    let light_model = assets.model_store.get("cube.obj").unwrap();
+    let light_model = assets.model_store.get("sphere.obj").unwrap();
 
     //
     // Render passes
