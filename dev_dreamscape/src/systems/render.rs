@@ -62,13 +62,13 @@ pub fn render_to_texture(
             .push(transform);
     }
 
-    println!("instances hashmap: {:?}",instances);
+    //println!("instances hashmap: {:?}",instances);
     
 
     // Lookup Model from ModelSpec and flatten to vector
     let mut nodes: Vec<(&Model, &String, Vec<&Transform>)> = vec![];
     for (modelname, transforms) in instances.into_iter() {
-        println!("nodes modelname: {:?}",modelname);
+        //println!("nodes modelname: {:?}",modelname);
         let model =  assets.model_store.get(modelname).unwrap();
         nodes.push((model, modelname, transforms));
     }
