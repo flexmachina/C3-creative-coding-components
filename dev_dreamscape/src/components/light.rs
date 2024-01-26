@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::*;
 
 use crate::components::Transform;
-use crate::math::Vec3f;
+use crate::math::{Vec3f, sRGBtolinearRGB};
 
 
 #[derive(Debug,Component)]
@@ -13,25 +13,25 @@ impl Light {
     pub fn spawn(mut commands: Commands) {
         commands.spawn((
             Light {
-                color: Vec3f::new(1., 1., 1.)
+                color: sRGBtolinearRGB(Vec3f::new(179.,56.,56.))
             },
             Transform::from_position(Vec3f::new(-5., 10., -5.)),
         ));
         commands.spawn((
             Light {
-                color: Vec3f::new(1., 0., 0.)
+                color: sRGBtolinearRGB(Vec3f::new(227.,181.,164.))
             },
             Transform::from_position(Vec3f::new(5., 10., -5.)),
         ));
         commands.spawn((
             Light {
-                color: Vec3f::new(0., 1., 0.)
+                color: sRGBtolinearRGB(Vec3f::new(59.,195.,132.))
             },
             Transform::from_position(Vec3f::new(5., 10., 5.)),
         ));
         commands.spawn((
             Light {
-                color: Vec3f::new(0., 0., 1.)
+                color: sRGBtolinearRGB(Vec3f::new(243.,152.,68.))
             },
             Transform::from_position(Vec3f::new(-5., 10., 5.)),
         ));
