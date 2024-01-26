@@ -40,6 +40,7 @@ pub struct App {
     pub spawn_scene_schedule_label: SpawnLabel,
     pub preupdate_schedule_label: PreupdateLabel,
     pub update_schedule_label: UpdateLabel,
+    pub camera_update_schedule_label: CameraUpdateLabel,
     pub render_schedule_label: RenderLabel,
 }
 
@@ -169,6 +170,9 @@ impl App {
         let update_schedule = new_update_schedule();
         let update_schedule_label = update_schedule.1.clone();
         world.add_schedule(update_schedule.0, update_schedule.1);
+        let camera_update_schedule: (Schedule, CameraUpdateLabel) = new_camera_update_schedule();
+        let camera_update_schedule_label = camera_update_schedule.1.clone();
+        world.add_schedule(camera_update_schedule.0, camera_update_schedule.1);
         let render_schedule = new_render_schedule();
         let render_schedule_label = render_schedule.1.clone();
         world.add_schedule(render_schedule.0, render_schedule.1);
@@ -178,6 +182,7 @@ impl App {
             spawn_scene_schedule_label,
             preupdate_schedule_label,
             update_schedule_label,
+            camera_update_schedule_label,
             render_schedule_label
         }
     }
@@ -245,6 +250,8 @@ impl App {
             rot,
             projection_matrix
         });
+        let camera_update_schedule_label = self.camera_update_schedule_label.clone();
+        self.world.run_schedule(camera_update_schedule_label);
     }
 
     #[allow(dead_code)]
