@@ -58,18 +58,6 @@ pub fn new_preupdate_schedule() -> (Schedule, PreupdateLabel) {
     (schedule, PreupdateLabel)
 }
 
-#[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub struct CameraUpdateLabel;
-
-pub fn new_camera_update_schedule() -> (Schedule, CameraUpdateLabel) {
-    let mut schedule = Schedule::default();
-    schedule
-        .add_systems((
-            Player::update_player_view_xr,
-        ));
-    (schedule, CameraUpdateLabel)
-}
-
 
 #[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct UpdateLabel;
@@ -87,6 +75,19 @@ pub fn new_update_schedule() -> (Schedule, UpdateLabel) {
         //.add_system(PhysicsBody::update_grabbed.after(PhysicsBody::grab_start_stop))
         .add_systems(FreeBox::spawn_by_player.after(Player::update));
     (schedule, UpdateLabel)
+}
+
+
+#[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct CameraUpdateLabel;
+
+pub fn new_camera_update_schedule() -> (Schedule, CameraUpdateLabel) {
+    let mut schedule = Schedule::default();
+    schedule
+        .add_systems((
+            Player::update_player_view_xr,
+        ));
+    (schedule, CameraUpdateLabel)
 }
 
 

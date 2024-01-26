@@ -36,12 +36,6 @@ pub struct AppState {
 
 pub struct App {
     pub world: World,
-
-    pub spawn_scene_schedule_label: SpawnLabel,
-    pub preupdate_schedule_label: PreupdateLabel,
-    pub update_schedule_label: UpdateLabel,
-    pub camera_update_schedule_label: CameraUpdateLabel,
-    pub render_schedule_label: RenderLabel,
 }
 
 /*
@@ -162,28 +156,18 @@ impl App {
 
 
         let spawn_scene_schedule = new_spawn_scene_schedule();
-        let spawn_scene_schedule_label = spawn_scene_schedule.1.clone();
         world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
         let preupdate_schedule = new_preupdate_schedule();
-        let preupdate_schedule_label = preupdate_schedule.1.clone();
         world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
         let update_schedule = new_update_schedule();
-        let update_schedule_label = update_schedule.1.clone();
         world.add_schedule(update_schedule.0, update_schedule.1);
-        let camera_update_schedule: (Schedule, CameraUpdateLabel) = new_camera_update_schedule();
-        let camera_update_schedule_label = camera_update_schedule.1.clone();
+        let camera_update_schedule = new_camera_update_schedule();
         world.add_schedule(camera_update_schedule.0, camera_update_schedule.1);
         let render_schedule = new_render_schedule();
-        let render_schedule_label = render_schedule.1.clone();
         world.add_schedule(render_schedule.0, render_schedule.1);
 
         Self {
             world,
-            spawn_scene_schedule_label,
-            preupdate_schedule_label,
-            update_schedule_label,
-            camera_update_schedule_label,
-            render_schedule_label
         }
     }
 
@@ -233,12 +217,9 @@ impl App {
         frametime_events.send(FrameTimeEvent {
             duration,
         });
-        let spawn_scene_schedule_label = self.spawn_scene_schedule_label.clone();
-        let preupdate_schedule_label = self.preupdate_schedule_label.clone();
-        let update_schedule_label = self.update_schedule_label.clone();
-        self.world.run_schedule(spawn_scene_schedule_label);
-        self.world.run_schedule(preupdate_schedule_label);
-        self.world.run_schedule(update_schedule_label);
+        self.world.run_schedule(SpawnLabel);
+        self.world.run_schedule(PreupdateLabel);
+        self.world.run_schedule(UpdateLabel);
     }
 
     #[allow(dead_code)]
@@ -250,8 +231,7 @@ impl App {
             rot,
             projection_matrix
         });
-        let camera_update_schedule_label = self.camera_update_schedule_label.clone();
-        self.world.run_schedule(camera_update_schedule_label);
+        self.world.run_schedule(CameraUpdateLabel);
     }
 
     #[allow(dead_code)]
@@ -461,16 +441,10 @@ pub async fn run_experience(webxr: bool) {
                 if webxr {
                     return;
                 }
-                 
-                let spawn_scene_schedule_label = app.spawn_scene_schedule_label.clone();
-                let preupdate_schedule_label = app.preupdate_schedule_label.clone();
-                let update_schedule_label = app.update_schedule_label.clone();
-                let render_schedule_label = app.render_schedule_label.clone();
-
-                app.world.run_schedule(spawn_scene_schedule_label);
-                app.world.run_schedule(preupdate_schedule_label);
-                app.world.run_schedule(update_schedule_label);
-                app.world.run_schedule(render_schedule_label);
+                app.world.run_schedule(SpawnLabel);
+                app.world.run_schedule(PreupdateLabel);
+                app.world.run_schedule(UpdateLabel);
+                app.world.run_schedule(RenderLabel);
             },
 
             Event::RedrawEventsCleared => {
