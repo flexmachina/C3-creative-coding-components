@@ -15,12 +15,13 @@ impl FloorBox {
     ) {
         let modelspec = ModelSpec::new(String::from("moon_surface.obj"));
 
-        let pos = Vec3f::new(0.0, -1., 0.0);
+        let pos = Vec3f::new(0.0, -2., 0.0);
         let rot = UnitQuatf::identity();
         //let scale = Vec3f::new(100.0, 0.5, 100.0);
-        let scale = Vec3f::new(1.0, 1.0, 1.0);
+        let scale = Vec3f::new(30.0, 30.0, 30.0);
         let transform = Transform::new(pos, rot, scale);
 
+        /*
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {
                 pos,
@@ -31,7 +32,9 @@ impl FloorBox {
             },
             &mut physics,
         );
+        */
 
-        commands.spawn((FloorBox, modelspec, physics_body, transform));
+        commands.spawn((FloorBox, modelspec, //physics_body,
+                        transform));
     }   
 }
