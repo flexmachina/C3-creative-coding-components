@@ -44,6 +44,7 @@ impl FreeBox {
                 rotation_axis: Vec3f::identity(),
                 rotation_angle: 0.0,
                 movable: true,
+                collision_model: None,
             },
             physics,
         );

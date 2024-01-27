@@ -1,9 +1,11 @@
 use crate::components::Transform;
-use crate::math::Vec3f;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
+use crate::assets::{CollisionModel};
 //use crate::components::grab::Grab;
+use crate::math::{Vec2, Vec3, Vec3f, to_point};
+use rapier3d::prelude::{Point,Real};
 
 #[derive(Component)]
 pub struct PhysicsBody {
@@ -17,6 +19,7 @@ pub struct PhysicsBodyParams {
     pub rotation_angle: f32,
     pub rotation_axis: Vec3f,
     pub movable: bool,
+    pub collision_model:Option<CollisionModel> 
 }
 
 impl PhysicsBody {
@@ -27,25 +30,59 @@ impl PhysicsBody {
             rotation_axis,
             rotation_angle,
             movable,
+            collision_model,
         } = params;
 
 
         let body = RigidBodyBuilder::new(orig_type(movable))
             .translation(vector![pos.x, pos.y, pos.z])
             .rotation(rotation_axis * rotation_angle)
+            .gravity_scale(0.3)
             .build();
 
-        // TODO Other shapes
-        let collider = ColliderBuilder::cuboid(scale.x, scale.y, scale.z)
-            .restitution(0.2)
-            .friction(0.7)
-            .build();
-        let (handle, _) = physics.add_body(body, collider);
 
-        Self {
-            handle,
-            //movable
-        }
+        match collision_model {
+            Some(cm) => {
+
+                let scaled_points = cm.get_all_vertices_points().
+                        into_iter().map(|v| {
+                            to_point(Vec3f::new(v.x * scale.x , v.y * scale.y,  v.z * scale.z))                                       
+                        }).collect::<Vec<_>>();
+
+
+                // TODO Other shapes
+                let collider = ColliderBuilder::trimesh(
+                            scaled_points,
+                            cm.get_all_triangle_indices(),
+                    )
+                    .restitution(0.2)
+                    .friction(0.7)
+                    //.translation(vector![pos.x, pos.y, pos.z])
+                    //.rotation(rotation_axis * rotation_angle)
+                    .build();
+                let (handle, _) = physics.add_body(body, collider);
+
+                return(Self {
+                    handle,
+                    //movable
+                })
+            }
+            _ => {
+                // TODO Other shapes
+                let collider = ColliderBuilder::cuboid(scale.x, scale.y, scale.z)
+                    .restitution(0.2)
+                    .friction(0.7)
+                    .build();
+                let (handle, _) = physics.add_body(body, collider);
+
+                return(Self {
+                    handle,
+                    //movable
+                })
+            }
+        };
+
+
     }
 
     pub fn sync(mut q: Query<(&mut Transform, &PhysicsBody)>, physics: Res<PhysicsWorld>) {

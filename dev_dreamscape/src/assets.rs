@@ -9,10 +9,20 @@ use std::collections::HashMap;
 use crate::device::Device;
 use crate::texture::Texture;
 use crate::{model, texture};
-use crate::math::{Vec2, Vec3};
+use crate::math::{Vec2, Vec3, Vec3f, to_point};
+use rapier3d::prelude::{Point,Real};
 
 use crate::logging::printlog;
 use crate::renderers::{PhongPass, SkyboxPass};
+
+
+
+
+
+
+
+
+
 
 
 #[cfg(target_arch = "wasm32")]
@@ -237,6 +247,103 @@ pub async fn load_model(
 
 
 
+#[derive(Clone, Debug)]
+pub struct CollisionMesh {
+    pub vertices: Vec<Vec3f>,
+    pub triangle_indices: Vec<[u32; 3]> 
+}
+
+#[derive(Clone, Debug)]
+pub struct CollisionModel {
+    pub collision_meshes: Vec<CollisionMesh>,
+}
+
+impl CollisionModel {
+
+    pub fn get_all_vertices(&self) -> Vec<Vec3f> {
+        self.collision_meshes.clone().into_iter().map(|m| {
+            m.vertices            
+        }).collect::<Vec<_>>().into_iter().flatten().collect::<Vec<Vec3f>>()
+    }
+
+    pub fn get_all_vertices_points(&self) -> Vec<Point<Real>> {
+        self.get_all_vertices().into_iter().map( |v| {
+            to_point(v)
+        }).collect::<Vec<Point<Real>>>()
+    }
+
+    pub fn get_all_triangle_indices(&self) -> Vec<[u32; 3]> {
+        self.collision_meshes.clone().into_iter().map(|m| {
+            m.triangle_indices
+        }).collect::<Vec<_>>().into_iter().flatten().collect::<Vec<[u32; 3]>>()
+    }
+}
+
+
+
+
+pub async fn load_collision_model(file_name: &str) -> anyhow::Result<CollisionModel> {
+    let obj_text = load_string(file_name).await?;
+    let obj_cursor = Cursor::new(obj_text);
+    let mut obj_reader = BufReader::new(obj_cursor);
+
+    let (models, obj_materials) = tobj::load_obj_buf_async(
+        &mut obj_reader,
+        &tobj::LoadOptions {
+            triangulate: true,
+            single_index: true,
+            ..Default::default()
+        },
+        |p| async move {
+            let mat_text = load_string(&p).await.unwrap();
+            tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
+        },
+    )
+    .await?;
+
+    let collision_meshes = models
+        .into_iter()
+        .map(|m| {
+            let mut vertices = (0..m.mesh.positions.len() / 3)
+                .map(|i| Vec3f::new(
+                        m.mesh.positions[i * 3] as f32,
+                        m.mesh.positions[i * 3 + 1] as f32,
+                        m.mesh.positions[i * 3 + 2] as f32
+                    )
+                ).collect::<Vec<_>>();
+
+            let triangle_indices = m.mesh.indices.chunks(3).collect::<Vec<_>>().iter().map(
+                    |i| [i[0] as u32, i[1] as u32, i[2] as u32]
+                ).collect::<Vec<[u32;3]>>();
+
+            CollisionMesh {
+                vertices,
+                triangle_indices,
+            }
+        }).collect::<Vec<_>>();
+
+    Ok(CollisionModel { collision_meshes })
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -248,6 +355,7 @@ pub async fn load_model(
 pub struct Assets {
     pub skybox_tex: texture::Texture,
     pub model_store: HashMap<String,model::Model>,
+    pub collision_model_store: HashMap<String,CollisionModel>,
 }
 
 impl Assets {
@@ -261,18 +369,29 @@ impl Assets {
             "moon_surface.obj"
         ];
 
+        let collision_model_paths = vec![
+            "moon_surface-collider.obj"
+        ];
+
+
         let mut model_store = HashMap::new();
         for model_path in model_paths {
             let model = load_model(model_path, &device, &device.queue()).await.unwrap();
             model_store.insert(model_path.to_string(), model);
         }
 
-        let skybox_tex = 
-            texture::Texture::load_cubemap_from_pngs(
+        let mut collision_model_store = HashMap::new();
+        for collision_model_path in collision_model_paths {
+            let model = load_collision_model(collision_model_path).await.unwrap();
+            collision_model_store.insert(collision_model_path.to_string(), model);
+        }
+
+        let skybox_tex = texture::Texture::load_cubemap_from_pngs(
                 "skyboxes/planet_atmosphere", &device, &device.queue()).await;
         Self {
             skybox_tex,
             model_store,
+            collision_model_store
         }
     }
 

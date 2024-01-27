@@ -2,6 +2,7 @@ use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams};
 use crate::components::ModelSpec;
 use crate::math::{Vec3f,UnitQuatf};
+use crate::assets::{Assets};
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 
@@ -12,6 +13,7 @@ impl FloorBox {
     pub fn spawn(
         mut commands: Commands,
         mut physics: ResMut<PhysicsWorld>,
+        assets: Res<Assets>,
     ) {
         let modelspec = ModelSpec::new(String::from("moon_surface.obj"));
 
@@ -21,7 +23,9 @@ impl FloorBox {
         let scale = Vec3f::new(30.0, 30.0, 30.0);
         let transform = Transform::new(pos, rot, scale);
 
-        /*
+        let collision_model =  assets.collision_model_store.get(
+                        &String::from("moon_surface-collider.obj")).unwrap();
+        
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {
                 pos,
@@ -29,12 +33,13 @@ impl FloorBox {
                 rotation_axis: Vec3f::from_element(0.0),
                 rotation_angle: 0.0,
                 movable: false,
+                collision_model: Some(collision_model.clone()),
             },
             &mut physics,
         );
-        */
+        
 
-        commands.spawn((FloorBox, modelspec, //physics_body,
+        commands.spawn((FloorBox, modelspec, physics_body,
                         transform));
     }   
 }
