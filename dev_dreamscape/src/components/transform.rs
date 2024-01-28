@@ -85,6 +85,13 @@ impl Transform {
         self.rebuild_matrix();
     }
 
+    pub fn set_pose_and_scale(&mut self, pos: Vec3f, rotation: UnitQuatf, scale: Vec3f) {
+        self.pos = pos;
+        self.rot = rotation;
+        self.scale = scale;
+        self.rebuild_matrix();
+    }
+
     pub fn set(&mut self, pos: Vec3f, rotation: Quatf) {
         self.rot = UnitQuat::from_quaternion(rotation);
         self.pos = pos;

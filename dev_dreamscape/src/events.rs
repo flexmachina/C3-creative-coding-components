@@ -34,5 +34,9 @@ pub struct CameraSetEvent {
     pub projection_matrix: Mat4f
 }
 
-
-
+#[derive(Event)]
+pub struct HandUpdateEvent {
+    pub hand: bool,
+    pub joint_transforms: Vec<Mat4f>,
+    pub joint_radii: Vec<f32>,
+}

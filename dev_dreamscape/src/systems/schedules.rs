@@ -16,7 +16,8 @@ use crate::components::{
     FloorBox, 
     FreeBox,
     Light, 
-    Player, 
+    Player,
+    PlayerHands,
     Skybox,
     Transform
     //PlayerTarget
@@ -36,6 +37,7 @@ pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
         .add_systems(FreeBox::spawn.run_if(run_once()))
         .add_systems(FloorBox::spawn.run_if(run_once()))
         .add_systems(Player::spawn.run_if(run_once()))
+        .add_systems(PlayerHands::spawn.run_if(run_once()))
         .add_systems(Light::spawn.run_if(run_once()));
         //.add_system(PlayerTarget::spawn.run_if(run_once()))
     (schedule, SpawnLabel)
@@ -77,6 +79,17 @@ pub fn new_update_schedule() -> (Schedule, UpdateLabel) {
     (schedule, UpdateLabel)
 }
 
+#[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
+pub struct HandUpdateLabel;
+
+pub fn new_hand_update_schedule() -> (Schedule, HandUpdateLabel) {
+    let mut schedule = Schedule::default();
+    schedule
+        .add_systems((
+            PlayerHands::update,
+        ));
+    (schedule, HandUpdateLabel)
+}
 
 #[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct CameraUpdateLabel;

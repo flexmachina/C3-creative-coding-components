@@ -5,6 +5,7 @@ mod light;
 mod model_spec;
 mod physics_body;
 mod player;
+mod player_hands;
 mod skybox;
 //mod player_target;
 mod transform;
@@ -17,6 +18,7 @@ pub use light::Light;
 pub use model_spec::ModelSpec;
 pub use physics_body::{PhysicsBody, PhysicsBodyParams};
 pub use player::Player;
+pub use player_hands::PlayerHands;
 pub use transform::Transform;
 pub use skybox::Skybox;
 

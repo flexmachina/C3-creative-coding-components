@@ -1,6 +1,6 @@
 use crate::device::{Device, SurfaceSize};
 use crate::events::{KeyboardEvent, MouseEvent, WindowResizeEvent,
-                    FrameTimeEvent, CameraSetEvent};
+                    FrameTimeEvent, CameraSetEvent, HandUpdateEvent};
 use crate::frame_time::FrameTime;
 use crate::math::{Rect, Vec3f, UnitQuatf, Mat4f};
 use crate::input::Input;
@@ -116,6 +116,7 @@ impl App {
         world.init_resource::<Events<KeyboardEvent>>();
         world.init_resource::<Events<MouseEvent>>();
         world.init_resource::<Events<FrameTimeEvent>>();
+        world.init_resource::<Events<HandUpdateEvent>>();
         world.init_resource::<Events<CameraSetEvent>>();
 
         //world.insert_non_send_resource(event_loop);
@@ -161,6 +162,8 @@ impl App {
         world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
         let update_schedule = new_update_schedule();
         world.add_schedule(update_schedule.0, update_schedule.1);
+        let hand_update_schedule = new_hand_update_schedule();
+        world.add_schedule(hand_update_schedule.0, hand_update_schedule.1);
         let camera_update_schedule = new_camera_update_schedule();
         world.add_schedule(camera_update_schedule.0, camera_update_schedule.1);
         let render_schedule = new_render_schedule();
@@ -177,7 +180,7 @@ impl App {
                                 ResMut<Input>,
                                 EventWriter<WindowResizeEvent>, EventWriter<KeyboardEvent>,
                                 EventWriter<MouseEvent>, EventWriter<FrameTimeEvent>,
-                                EventWriter<CameraSetEvent>) {
+                                EventWriter<HandUpdateEvent>, EventWriter<CameraSetEvent>) {
 
         let mut world_systemstate: SystemState<(
             NonSend<Window>,
@@ -190,6 +193,7 @@ impl App {
             EventWriter<KeyboardEvent>,
             EventWriter<MouseEvent>,
             EventWriter<FrameTimeEvent>,
+            EventWriter<HandUpdateEvent>,
             EventWriter<CameraSetEvent>,
         )> = SystemState::from_world(&mut self.world);
         world_systemstate.get_mut(&mut self.world)
@@ -212,7 +216,7 @@ impl App {
     #[allow(dead_code)]
     pub fn update_scene(&mut self, duration: std::time::Duration) {
         //TODO need to set the time via event
-        let (_,_,_,_,_,_,_,_,mut frametime_events, _) = 
+        let (_,_,_,_,_,_,_,_,mut frametime_events, _, _) = 
                             self.world_systemstate_get_mut();
         frametime_events.send(FrameTimeEvent {
             duration,
@@ -223,8 +227,25 @@ impl App {
     }
 
     #[allow(dead_code)]
+    pub fn update_hand(
+        &mut self,
+        hand: bool,
+        joint_transforms: Vec<Mat4f>,
+        joint_radii: Vec<f32>
+    ) {
+        let (_,_,_,_,_,_,_,_,_, mut hand_update_events, _) = 
+                            self.world_systemstate_get_mut();
+        hand_update_events.send(HandUpdateEvent {
+            hand,
+            joint_transforms,
+            joint_radii,
+        });
+        self.world.run_schedule(HandUpdateLabel);
+    }
+
+    #[allow(dead_code)]
     pub fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
-        let (_,_,_,_,_,_,_,_,_, mut cameraset_events) = 
+        let (_,_,_,_,_,_,_,_,_,_, mut cameraset_events) = 
                             self.world_systemstate_get_mut();
         cameraset_events.send(CameraSetEvent {
             pos,
@@ -372,6 +393,7 @@ pub async fn run_experience(webxr: bool) {
             mut resize_events,
             mut keyboard_events,
             mut mouse_events,
+            _,
             _,
             _
         ) = app.world_systemstate_get_mut();

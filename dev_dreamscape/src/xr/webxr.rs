@@ -32,7 +32,22 @@ fn to_mat(v: &Vec<f32>) -> Mat4f {
     )
 }
 
-pub fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsValue> {
+fn to_joint_transform_mats(arr: &[f32; 16 * JOINTS.len()]) -> Vec<Mat4f> {
+    let mut mats: Vec<Mat4f> = vec![];
+    for i in 0..JOINTS.len() {
+        let mat = Mat4::from_column_slice(&arr[i*16..(i+1)*16]);
+        mats.push(mat);
+    }
+    mats
+}
+
+fn js_array(values: &[&str]) -> JsValue {
+    return JsValue::from(values.into_iter()
+        .map(|x| JsValue::from_str(x))
+        .collect::<js_sys::Array>());
+}
+
+fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsValue> {
     let canvas = web_sys::window()
         .unwrap()
         .document()
@@ -96,7 +111,10 @@ impl WebXRApp {
             return ();
         }
 
-        let xr_session_promise = xr.request_session(session_mode);
+        let mut session_init = XrSessionInit::new();
+        session_init.optional_features(&js_array(&["hand-tracking"]));
+        let xr_session_promise = xr.request_session_with_options(session_mode, &session_init);
+        //let xr_session_promise = xr.request_session(session_mode);
         let xr_session = wasm_bindgen_futures::JsFuture::from(xr_session_promise).await;
         let xr_session: XrSession = xr_session.unwrap().into();
 
@@ -134,6 +152,36 @@ impl WebXRApp {
             let mut app = app.borrow_mut();
             let ref_space = ref_space.borrow_mut();
             let ref_space = ref_space.as_ref().unwrap();
+
+            // Get hand poses and send to app
+            for i in 0..sess.input_sources().length() {
+                let input_source = sess.input_sources().get(i).unwrap();
+                match input_source.hand() {
+                    Some(hand) => {
+                        let mut poses: [f32; 16 * JOINTS.len()] = [0.; 16 * JOINTS.len()];
+                        let mut radii: [f32; JOINTS.len()] = [0.; JOINTS.len()];
+                        let joint_arr = js_sys::Array::new_with_length(JOINTS.len() as u32);
+                        for (j, joint) in JOINTS.iter().enumerate() {
+                            let join_pose = hand.get(joint.clone());
+                            joint_arr.set(j as u32, join_pose.into());
+                        }        
+                        if !frame.fill_poses(&joint_arr, ref_space, &mut poses) {
+                            log::error!("Failed to fill hand join poses");
+                        }
+                        if !frame.fill_joint_radii(&joint_arr, &mut radii) {       
+                            log::error!("Failed to fill hand joint radii");
+                        }
+
+                        let joint_transform_mats = to_joint_transform_mats(&poses);
+                        match input_source.handedness() {
+                            XrHandedness::Left => { app.update_hand(false, joint_transform_mats, radii.to_vec()) }
+                            XrHandedness::Right => { app.update_hand(true, joint_transform_mats, radii.to_vec()) }
+                            _ => {}
+                        }
+                    }
+                    None => {} 
+                };
+            }
 
             let xr_gl_layer = sess.render_state().base_layer().unwrap();
 
@@ -212,3 +260,32 @@ impl WebXRApp {
         request_animation_frame(sess, g.borrow().as_ref().unwrap());
     }
 }
+
+// TODO: move to another file
+const JOINTS: &'static [XrHandJoint] = &[
+    XrHandJoint::Wrist,
+    XrHandJoint::ThumbMetacarpal,
+    XrHandJoint::ThumbPhalanxProximal,
+    XrHandJoint::ThumbPhalanxDistal,
+    XrHandJoint::ThumbTip,
+    XrHandJoint::IndexFingerMetacarpal,
+    XrHandJoint::IndexFingerPhalanxProximal,
+    XrHandJoint::IndexFingerPhalanxIntermediate,
+    XrHandJoint::IndexFingerPhalanxDistal,
+    XrHandJoint::IndexFingerTip,
+    XrHandJoint::MiddleFingerMetacarpal,
+    XrHandJoint::MiddleFingerPhalanxProximal,
+    XrHandJoint::MiddleFingerPhalanxIntermediate,
+    XrHandJoint::MiddleFingerPhalanxDistal,
+    XrHandJoint::MiddleFingerTip,
+    XrHandJoint::RingFingerMetacarpal,
+    XrHandJoint::RingFingerPhalanxProximal,
+    XrHandJoint::RingFingerPhalanxIntermediate,
+    XrHandJoint::RingFingerPhalanxDistal,
+    XrHandJoint::RingFingerTip,
+    XrHandJoint::PinkyFingerMetacarpal,
+    XrHandJoint::PinkyFingerPhalanxProximal,
+    XrHandJoint::PinkyFingerPhalanxIntermediate,
+    XrHandJoint::PinkyFingerPhalanxDistal,
+    XrHandJoint::PinkyFingerTip,
+];
