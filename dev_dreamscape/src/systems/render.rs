@@ -35,17 +35,17 @@ pub fn prepare_render_pipelines(
 
 
 pub fn render_to_texture(
-                device: &Device,
-                assets: Res<Assets>,
-                mut renderers: ResMut<Renderers>,
-                camera_qry: Query<(&Camera, &Transform), With<Player>>,
-                meshes_qry: Query<(&ModelSpec, &Transform)>,
-                lights_qry: Query<(&Light, &Transform)>,
-                //                                         
-                color_texture: &wgpu::Texture,
-                depth_texture: Option<&wgpu::Texture>,
-                viewport: Option<Rect>,
-                clear: bool) {
+    device: &Device,
+    assets: Res<Assets>,
+    mut renderers: ResMut<Renderers>,
+    camera_qry: Query<(&Camera, &Transform), With<Player>>,
+    meshes_qry: Query<(&ModelSpec, &Transform)>,
+    lights_qry: Query<(&Light, &Transform)>,
+    //                                         
+    color_texture: &wgpu::Texture,
+    depth_texture: &wgpu::Texture,
+    viewport: Option<Rect>,
+    clear: bool) {
 
     let camera = camera_qry.single();
   
@@ -83,13 +83,7 @@ pub fn render_to_texture(
 
 
     let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let depth_view = match depth_texture {
-        Some(d) => d.create_view(&wgpu::TextureViewDescriptor::default()),
-        _ => device.depth_tex().texture.create_view(&wgpu::TextureViewDescriptor::default()) 
-            //Error because this returned a reference
-            //device.depth_tex().view
-    };
-
+    let depth_view = depth_texture.create_view(&wgpu::TextureViewDescriptor::default());
 
     // Skypass pass
     // TODO: Use Skybox Query to make skybox config dynamic
@@ -142,7 +136,7 @@ pub fn render(
                 meshes_qry,
                 lights_qry,
                 &surface_texture.texture,
-                None,
+                &device.depth_tex().texture,
                 None,
                 true);
 

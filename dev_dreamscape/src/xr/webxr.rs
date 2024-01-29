@@ -243,7 +243,7 @@ impl WebXRApp {
                 // so only clear the framebuffer once before the first render pass.
                 let clear = view_idx == 0;
                 // Callback
-                app.render_to_texture(&color_texture, Some(&depth_texture), Some(vp), clear);
+                app.render_to_texture(&color_texture, &depth_texture, Some(vp), clear);
             }
 
             // Schedule ourself for another requestAnimationFrame callback.
