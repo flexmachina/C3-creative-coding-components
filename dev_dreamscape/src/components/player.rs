@@ -46,7 +46,9 @@ impl Player {
         transform.look_at(Vec3f::from_element(0.0));
 
         let collider = ColliderBuilder::ball(0.5)
-            .restitution(0.7)
+            .restitution(0.1)
+            .friction(0.1)
+            .mass(500.0)
             .translation(pos)
             .build();
         let collider_handle = physics.colliders.insert(collider);

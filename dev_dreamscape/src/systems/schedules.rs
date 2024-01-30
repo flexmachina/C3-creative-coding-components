@@ -18,7 +18,8 @@ use crate::components::{
     Light, 
     Player, 
     Skybox,
-    Transform
+    Transform,
+    Rock
     //PlayerTarget
 };
 use crate::components::PhysicsBody;
@@ -34,6 +35,7 @@ pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
         .add_systems(prepare_render_pipelines.run_if(run_once()))
         .add_systems(Skybox::spawn.run_if(run_once()))
         .add_systems(FreeBox::spawn.run_if(run_once()))
+        .add_systems(Rock::spawn_rock_field.run_if(run_once()))
         .add_systems(FloorBox::spawn.run_if(run_once()))
         .add_systems(Player::spawn.run_if(run_once()))
         .add_systems(Light::spawn.run_if(run_once()));

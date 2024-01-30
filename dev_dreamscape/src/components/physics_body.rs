@@ -13,13 +13,15 @@ pub struct PhysicsBody {
     //movable: bool
 }
 
-pub struct PhysicsBodyParams {
+pub struct PhysicsBodyParams<'a> {
     pub pos: Vec3f,
     pub scale: Vec3f,
     pub rotation_angle: f32,
     pub rotation_axis: Vec3f,
     pub movable: bool,
-    pub collision_model:Option<CollisionModel> 
+    pub collision_model:Option<&'a CollisionModel>,
+    pub collision_ball:Option<f32>,
+    pub gravity_scale:Option<f32>, 
 }
 
 impl PhysicsBody {
@@ -31,18 +33,20 @@ impl PhysicsBody {
             rotation_angle,
             movable,
             collision_model,
+            collision_ball,
+            gravity_scale,
         } = params;
 
 
         let body = RigidBodyBuilder::new(orig_type(movable))
             .translation(vector![pos.x, pos.y, pos.z])
             .rotation(rotation_axis * rotation_angle)
-            .gravity_scale(0.3)
+            .gravity_scale(gravity_scale.unwrap_or(1.0))
             .build();
 
 
-        match collision_model {
-            Some(cm) => {
+        match (collision_model,collision_ball) {
+            (Some(cm),_) => {
 
                 let scaled_points = cm.get_all_vertices_points().
                         into_iter().map(|v| {
@@ -62,10 +66,26 @@ impl PhysicsBody {
                     .build();
                 let (handle, _) = physics.add_body(body, collider);
 
-                return(Self {
+                return Self {
                     handle,
                     //movable
-                })
+                }
+            }
+            (None,Some(ball_radius)) => {
+
+                let collider = ColliderBuilder::ball(ball_radius)
+                    .mass(0.1)
+                    .restitution(0.1)
+                    .friction(0.5)
+                    .build();
+                let (handle, _) = physics.add_body(body, collider);
+
+                return Self {
+                    handle,
+                    //movable
+                }
+
+
             }
             _ => {
                 // TODO Other shapes
@@ -75,10 +95,10 @@ impl PhysicsBody {
                     .build();
                 let (handle, _) = physics.add_body(body, collider);
 
-                return(Self {
+                return Self {
                     handle,
                     //movable
-                })
+                }
             }
         };
 

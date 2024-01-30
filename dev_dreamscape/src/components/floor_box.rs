@@ -15,7 +15,7 @@ impl FloorBox {
         mut physics: ResMut<PhysicsWorld>,
         assets: Res<Assets>,
     ) {
-        let modelspec = ModelSpec::new(String::from("moon_surface.obj"));
+        let modelspec = ModelSpec::new(String::from("moon_surface/moon_surface.obj"));
 
         let pos = Vec3f::new(0.0, -2., 0.0);
         let rot = UnitQuatf::identity();
@@ -24,7 +24,7 @@ impl FloorBox {
         let transform = Transform::new(pos, rot, scale);
 
         let collision_model =  assets.collision_model_store.get(
-                        &String::from("moon_surface-collider.obj")).unwrap();
+                        &String::from("moon_surface/moon_surface-collider.obj")).unwrap();
         
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {
@@ -33,7 +33,9 @@ impl FloorBox {
                 rotation_axis: Vec3f::from_element(0.0),
                 rotation_angle: 0.0,
                 movable: false,
-                collision_model: Some(collision_model.clone()),
+                collision_model: Some(&collision_model),
+                collision_ball: None,
+                gravity_scale: None,
             },
             &mut physics,
         );

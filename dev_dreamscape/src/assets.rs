@@ -15,6 +15,8 @@ use rapier3d::prelude::{Point,Real};
 use crate::logging::printlog;
 use crate::renderers::{PhongPass, SkyboxPass};
 
+use std::path::Path;
+
 
 
 
@@ -95,9 +97,12 @@ pub async fn load_model(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
 ) -> anyhow::Result<model::Model> {
+    
     let obj_text = load_string(file_name).await?;
     let obj_cursor = Cursor::new(obj_text);
     let mut obj_reader = BufReader::new(obj_cursor);
+
+    let file_folder = Path::new(&file_name).parent().unwrap();
 
     let (models, obj_materials) = tobj::load_obj_buf_async(
         &mut obj_reader,
@@ -107,7 +112,8 @@ pub async fn load_model(
             ..Default::default()
         },
         |p| async move {
-            let mat_text = load_string(&p).await.unwrap();
+            println!("mtl file path is {}",&file_folder.join(&p).to_str().unwrap());
+            let mat_text = load_string(&file_folder.join(&p).to_str().unwrap()).await.unwrap();
             tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
         },
     )
@@ -115,8 +121,12 @@ pub async fn load_model(
 
     let mut materials = Vec::new();
     for m in obj_materials? {
-        let diffuse_texture = load_texture(&m.diffuse_texture, false, device, queue).await?;
-        let normal_texture = load_texture(&m.normal_texture, true, device, queue).await?;
+
+        println!("mtl diffuse file path is {}",&file_folder.join(&m.diffuse_texture).to_str().unwrap());
+        println!("mtl normal file path is {}",&file_folder.join(&m.normal_texture).to_str().unwrap());
+
+        let diffuse_texture = load_texture(&file_folder.join(&m.diffuse_texture).to_str().unwrap(), false, device, queue).await?;
+        let normal_texture = load_texture(&file_folder.join(&m.normal_texture).to_str().unwrap(), true, device, queue).await?;
 
         materials.push(model::Material::new(
             &m.name,
@@ -287,6 +297,8 @@ pub async fn load_collision_model(file_name: &str) -> anyhow::Result<CollisionMo
     let obj_cursor = Cursor::new(obj_text);
     let mut obj_reader = BufReader::new(obj_cursor);
 
+    let file_folder = Path::new(&file_name).parent().unwrap();
+
     let (models, obj_materials) = tobj::load_obj_buf_async(
         &mut obj_reader,
         &tobj::LoadOptions {
@@ -295,7 +307,7 @@ pub async fn load_collision_model(file_name: &str) -> anyhow::Result<CollisionMo
             ..Default::default()
         },
         |p| async move {
-            let mat_text = load_string(&p).await.unwrap();
+            let mat_text = load_string(&file_folder.join(&p).to_str().unwrap()).await.unwrap();
             tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
         },
     )
@@ -366,11 +378,17 @@ impl Assets {
         let model_paths = vec![
             "cube.obj",
             "sphere.obj",
-            "moon_surface.obj"
+            "moon_surface/moon_surface.obj",
+            "Rock1/RedishRock.obj",
+            "Rock2/Rock2.obj",
+            "Rock1/RedishRock-collider.obj",
+            "Rock2/Rock2-collider.obj",
         ];
 
         let collision_model_paths = vec![
-            "moon_surface-collider.obj"
+            "moon_surface/moon_surface-collider.obj",
+            "Rock1/RedishRock-collider.obj",
+            "Rock2/Rock2-collider.obj",
         ];
 
 
