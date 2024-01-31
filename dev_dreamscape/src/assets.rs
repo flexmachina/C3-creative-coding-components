@@ -378,7 +378,7 @@ impl Assets {
         let model_paths = vec![
             "cube.obj",
             "sphere.obj",
-            "moon_surface/moon_surface.obj",
+            //"moon_surface/moon_surface.obj",
             "mars_surface/Crater.obj",
             "Rock1/RedishRock.obj",
             "Rock2/Rock2.obj",
@@ -388,7 +388,7 @@ impl Assets {
 
         let collision_model_paths = vec![
             "mars_surface/Crater_low-collision.obj",
-            "moon_surface/moon_surface-collider.obj",
+            //"moon_surface/moon_surface-collider.obj",
             "Rock1/RedishRock-collider.obj",
             "Rock2/Rock2-collider.obj",
         ];

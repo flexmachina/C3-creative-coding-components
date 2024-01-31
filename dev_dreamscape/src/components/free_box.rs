@@ -46,7 +46,9 @@ impl FreeBox {
                 movable: true,
                 collision_model: None,
                 collision_ball: None,
-                gravity_scale: Some(0.6)
+                gravity_scale: Some(0.6),
+                lin_vel: None,
+                ang_vel: None,
             },
             physics,
         );

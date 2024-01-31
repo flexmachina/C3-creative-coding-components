@@ -21,7 +21,7 @@ impl FloorBox {
         let pos = Vec3f::new(0.0, -2., 0.0);
         let rot = UnitQuatf::identity();
         //let scale = Vec3f::new(100.0, 0.5, 100.0);
-        let scale = Vec3f::new(30.0, 30.0, 30.0);
+        let scale = Vec3f::new(0.5, 0.5, 0.5);
         let transform = Transform::new(pos, rot, scale);
 
         let collision_model =  assets.collision_model_store.get(
@@ -38,6 +38,8 @@ impl FloorBox {
                 collision_model: Some(&collision_model),
                 collision_ball: None,
                 gravity_scale: None,
+                lin_vel: None,
+                ang_vel: None,
             },
             &mut physics,
         );

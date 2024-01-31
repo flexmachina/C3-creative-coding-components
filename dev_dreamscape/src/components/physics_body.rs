@@ -22,6 +22,8 @@ pub struct PhysicsBodyParams<'a> {
     pub collision_model:Option<&'a CollisionModel>,
     pub collision_ball:Option<f32>,
     pub gravity_scale:Option<f32>, 
+    pub lin_vel:Option<Vec3f>, 
+    pub ang_vel:Option<Vec3f>, 
 }
 
 impl PhysicsBody {
@@ -35,6 +37,8 @@ impl PhysicsBody {
             collision_model,
             collision_ball,
             gravity_scale,
+            lin_vel,
+            ang_vel,
         } = params;
 
 
@@ -42,6 +46,8 @@ impl PhysicsBody {
             .translation(vector![pos.x, pos.y, pos.z])
             .rotation(rotation_axis * rotation_angle)
             .gravity_scale(gravity_scale.unwrap_or(1.0))
+            .linvel(lin_vel.unwrap_or(Vec3f::new(0.0,0.0,0.0)))
+            .angvel(ang_vel.unwrap_or(Vec3f::new(0.0,0.0,0.0)))
             .build();
 
 
@@ -60,7 +66,7 @@ impl PhysicsBody {
                             cm.get_all_triangle_indices(),
                     )
                     .restitution(0.2)
-                    .friction(0.7)
+                    .friction(0.1)
                     //.translation(vector![pos.x, pos.y, pos.z])
                     //.rotation(rotation_axis * rotation_angle)
                     .build();
@@ -74,9 +80,9 @@ impl PhysicsBody {
             (None,Some(ball_radius)) => {
 
                 let collider = ColliderBuilder::ball(ball_radius)
-                    .mass(0.1)
-                    .restitution(0.1)
-                    .friction(0.5)
+                    .mass(0.05)
+                    .restitution(0.8)
+                    .friction(0.1)
                     .build();
                 let (handle, _) = physics.add_body(body, collider);
 
