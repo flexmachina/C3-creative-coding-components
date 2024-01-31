@@ -7,12 +7,11 @@ use naga_oil::compose::{
 
 
 macro_rules! load_shader {
-    ($composer:expr, $path:literal, $webxr:expr, $shader_defs:expr) => {{
+    ($composer:expr, $path:literal, $shader_defs:expr) => {{
         shader_utils::make_module(
             $composer,
             concat!("shaders/", $path),
             include_str!(concat!("shaders/", $path)), 
-            $webxr,
             $shader_defs)
     }};
 }
@@ -23,14 +22,10 @@ pub fn make_module(
     composer: &mut Composer,
     shader_path: &str,
     shader_source: &str,
-    webxr: bool,
     shader_defs: Option<HashMap<String, ShaderDefValue>>,
 )  -> naga::Module {
     
-    let mut shader_defs = shader_defs.unwrap_or_default();
-    if webxr {
-        shader_defs.insert("WEBXR".to_string(),  ShaderDefValue::Bool(true));
-    }
+    let shader_defs = shader_defs.unwrap_or_default();
     composer
     .make_naga_module(NagaModuleDescriptor {
         source: shader_source,

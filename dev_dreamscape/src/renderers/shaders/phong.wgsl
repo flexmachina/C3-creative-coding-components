@@ -194,21 +194,23 @@ fn light_contribution(
     view_dir: vec3<f32>
 ) -> vec3<f32> {
 
-    // We don't need (or want) much ambient light, so 0.1 is fine
-    let ambient_strength = 0.1;
-    let ambient_color = light.color * ambient_strength;
-
     // Create the lighting vectors
-    let light_dir = normalize(tangent_light_position - tangent_position);
+    let light_offset = tangent_light_position - tangent_position;
+    let light_distance2 = dot(light_offset, light_offset);
+    let light_dir = light_offset/sqrt(light_distance2);
     let half_dir = normalize(view_dir + light_dir);
 
     let diffuse_strength = max(dot(tangent_normal, light_dir), 0.0);
     let diffuse_color = light.color * diffuse_strength;
 
     let specular_strength = pow(max(dot(tangent_normal, half_dir), 0.0), 32.0);
-    let specular_color = specular_strength * light.color;
-
-    return ambient_color + diffuse_color + specular_color;
+    let specular_color = light.color * specular_strength;
+    
+    // Apply distance fall-off. Need a large constant here to make things bright enough
+    // TODO: experiemnt with different values
+    let attenuation = 40. / light_distance2;
+    
+    return  (diffuse_color + specular_color) * attenuation;
 }
 
 @fragment
@@ -273,12 +275,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 #if MAX_LIGHTS > 15
     result += light_contribution(lights[15], in.tangent_light_position15, in.tangent_position, tangent_normal, view_dir);
 #endif
-    result *= object_color.xyz;
-
-#ifdef WEBXR
-    let final_color = utils::gamma_correction(result);
-#else
-    let final_color = result;
-#endif
-    return vec4<f32>(final_color, object_color.a);
+    // TODO: experiment with different ambient values
+    let ambient_strength = 0.5;
+    result += ambient_strength;
+    
+    return vec4<f32>(object_color.xyz * result, object_color.a);
 }

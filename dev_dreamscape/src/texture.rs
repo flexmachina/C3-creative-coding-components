@@ -58,6 +58,69 @@ impl Texture {
         }
     }
 
+    pub fn create_texture(
+        device: &wgpu::Device,
+        label: Option<&str>,
+        size: wgpu::Extent3d,
+        format: wgpu::TextureFormat,
+        usage: wgpu::TextureUsages,
+        dimension: wgpu::TextureDimension,
+        filter_mode: wgpu::FilterMode,
+    ) -> Self {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label,
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension,
+            format,
+            usage,
+            view_formats: &[],
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
+            mipmap_filter: filter_mode,
+            ..Default::default()
+        });
+
+        Self {
+            texture,
+            view,
+            sampler,
+        }
+    }
+
+    pub fn create_2d_texture(
+        device: &wgpu::Device,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+        usage: wgpu::TextureUsages,
+        filter_mode: wgpu::FilterMode,
+        label: Option<&str>,
+    ) -> Self {
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+        Self::create_texture(
+            device,
+            label,
+            size,
+            format,
+            usage,
+            wgpu::TextureDimension::D2,
+            filter_mode,
+        )
+    }
+
     #[allow(dead_code)]
     pub fn from_bytes(
         device: &wgpu::Device,
@@ -296,7 +359,7 @@ impl Texture {
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Linear,
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
@@ -360,12 +423,13 @@ impl Texture {
         &self.view
     }
 
-    // Create null texture so shaders doesn't barf
+    // Create empty texture so shaders doesn't barf
     pub fn default(device: &wgpu::Device, _queue: &wgpu::Queue) -> Self {
-        // TODO: write 1x2 gray texture instead empty buffer?
+        // TODO: write 1x1 gray texture instead empty buffer?
+        let size = Extent3d{width: 1, height:1, depth_or_array_layers: 1};
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Default"),
-            size: Extent3d{width: 1, height:1, depth_or_array_layers: 1},
+            size,
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,

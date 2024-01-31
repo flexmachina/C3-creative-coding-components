@@ -256,8 +256,7 @@ impl App {
     }
 
     #[allow(dead_code)]
-    pub fn render_to_texture(&mut self, color_texture: &wgpu::Texture, depth_texture: &wgpu::Texture,
-                         viewport: Option<Rect>, clear: bool) {
+    pub fn render_to_texture(&mut self, color_texture: &wgpu::Texture, viewport: Option<Rect>, clear: bool) {
 
         let mut world_w_queries_systemstate: SystemState<(
             Res<Device>,
@@ -278,7 +277,6 @@ impl App {
                 meshes_qry,
                 light_qry,
                 &color_texture,
-                &depth_texture,
                 viewport,
                 clear);
 

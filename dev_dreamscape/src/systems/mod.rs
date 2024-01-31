@@ -19,7 +19,9 @@ pub use schedules::{SpawnLabel, PreupdateLabel, UpdateLabel, HandUpdateLabel, Ca
 use crate::frame_time::FrameTime;
 
 pub fn resize_device(mut device: ResMut<Device>, mut events: EventReader<WindowResizeEvent>) {
-    if let Some(e) = events.iter().last() { device.resize(e.new_size) }
+    if let Some(e) = events.iter().last() {
+        device.resize(e.new_size.width, e.new_size.height);
+    }
 }
 
 pub fn escape_on_exit(mut appstate: ResMut<AppState>, mut keyboard_events: EventReader<KeyboardEvent>) {

@@ -44,11 +44,5 @@ var cube_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let result = textureSample(cube_texture, cube_sampler, in.uv);
-#ifdef WEBXR
-    let final_color = vec4<f32>(utils::gamma_correction(result.xyz), result.a);;
-#else
-    let final_color = result;
-#endif
-    return final_color;
+    return textureSample(cube_texture, cube_sampler, in.uv);
 }

@@ -204,13 +204,16 @@ impl WebXRApp {
                 &xr_gl_layer,
                 app.color_format(),
                 "device framebuffer (colour)");
-
+            
+            // Not used - see render_to_texture call below
+            /*
             let depth_texture = utils::create_view_from_device_framebuffer(
                 app.device(),
                 framebuffer,
                 &xr_gl_layer,
                 crate::texture::Texture::DEPTH_FORMAT,
                 "device framebuffer (depth)");
+            */
         
             let delta_time = std::time::Duration::from_millis((time - *last_frame_time.borrow()) as u64);
             last_frame_time.replace(time);
@@ -243,7 +246,9 @@ impl WebXRApp {
                 // so only clear the framebuffer once before the first render pass.
                 let clear = view_idx == 0;
                 // Callback
-                app.render_to_texture(&color_texture, &depth_texture, Some(vp), clear);
+                // Not using the WebXR depth buffer as there's an error when using it together
+                // with the offscreen colour buffer ("WebGL: INVALID_OPERATION: drawBuffers: BACK or NONE)
+                app.render_to_texture(&color_texture, /*&depth_texture,*/ Some(vp), clear);
             }
 
             // Schedule ourself for another requestAnimationFrame callback.

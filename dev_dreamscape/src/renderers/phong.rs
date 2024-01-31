@@ -8,7 +8,6 @@ use crate::{
     device::Device,
     model,
     model::{DrawModel, Model, Vertex},
-    math::Rect,
     texture,
 };
 
@@ -19,7 +18,7 @@ use super::{
 };
 
 
-const MAX_LIGHTS: u64 = 10;
+const MAX_LIGHTS: u64 = 4;
 
 #[repr(C)]
 #[derive(Copy, Clone, Default, bytemuck::Pod, bytemuck::Zeroable)]
@@ -85,7 +84,6 @@ impl PhongPass {
         phong_config: &PhongConfig,
         device: &Device,
         color_format: wgpu::TextureFormat,
-        webxr: bool
     ) -> Self {
         // Setup global uniforms
         // Global bind group layout
@@ -292,7 +290,7 @@ impl PhongPass {
 
         let primitive = wgpu::PrimitiveState {
             topology,
-            front_face: if webxr {wgpu::FrontFace::Cw} else {wgpu::FrontFace::Ccw},
+            front_face: wgpu::FrontFace::Ccw,
             cull_mode: Some(wgpu::Face::Back),
             ..Default::default()
         };
@@ -301,15 +299,18 @@ impl PhongPass {
         };
 
         let mut shader_composer = shader_utils::init_composer();
-        let shader_defs = HashMap::from([("MAX_LIGHTS".to_string(), ShaderDefValue::Int(MAX_LIGHTS as i32))]);
+        let shader_defs = HashMap::from([
+            ("MAX_LIGHTS".to_string(), ShaderDefValue::Int(MAX_LIGHTS as i32))
+        ]);
         let phong_render_pipeline = {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                     label: Some("Phong Shader"),
                     source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                        shader_utils::load_shader!(&mut shader_composer, "phong.wgsl", webxr, Some(shader_defs.clone()))
+                        shader_utils::load_shader!(&mut shader_composer, "phong.wgsl", Some(shader_defs.clone()))
                 ))};
                 let shader_module = device.create_shader_module(shader_desc);
 
+                // TODO: Use utils::create_render_pipeline
                 device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("[Phong] Pipeline"),
                 layout: Some(&phong_pipeline_layout),
@@ -341,7 +342,7 @@ impl PhongPass {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                 label: Some("Light Shader"),
                 source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                    shader_utils::load_shader!(&mut shader_composer, "light.wgsl", webxr, Some(shader_defs.clone()))
+                    shader_utils::load_shader!(&mut shader_composer, "light.wgsl", Some(shader_defs.clone()))
                 ))
             };
             let shader_module = device.create_shader_module(shader_desc);
@@ -400,7 +401,6 @@ impl PhongPass {
         camera: (&Camera, &Transform),
         lights: &Vec<(&Light, &Transform)>,
         light_model: &Model,
-        viewport: &Option<Rect>,
         clear_color: bool,
         clear_depth: bool
     ) -> wgpu::CommandBuffer {
@@ -455,11 +455,6 @@ impl PhongPass {
                 }),
             });
             
-            match viewport {
-                Some(v) => { render_pass.set_viewport(v.x, v.y, v.w, v.h, 0.0, 1.0); }
-                _ => {}
-            };
-
             let instance_size = std::mem::size_of::<InstanceRaw>() as wgpu::BufferAddress;
 
             // Loop over the nodes  and setup model specific bind groups and 

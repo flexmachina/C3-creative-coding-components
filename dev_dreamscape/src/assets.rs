@@ -12,7 +12,7 @@ use crate::{model, texture};
 use crate::math::{Vec2, Vec3};
 
 use crate::logging::printlog;
-use crate::renderers::{PhongPass, SkyboxPass};
+use crate::renderers::{HdrPipeline, PhongPass, SkyboxPass};
 
 
 #[cfg(target_arch = "wasm32")]
@@ -285,13 +285,15 @@ impl Assets {
 pub struct Renderers {
     pub skybox_renderer: Option<SkyboxPass>,
     pub phong_renderer: Option<PhongPass>,
+    pub hdr_pipeline: Option<HdrPipeline>,
 }
 
 impl Renderers {
     pub fn init() -> Self {
         Self {
             skybox_renderer: None, 
-            phong_renderer: None
+            phong_renderer: None,
+            hdr_pipeline: None,
         }
     }
 }
