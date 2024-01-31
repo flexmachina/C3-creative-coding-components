@@ -1,5 +1,4 @@
 use std::f32::consts::PI;
-use crate::app::AppState;
 use crate::components::camera::Camera;
 use crate::components::Transform;
 use crate::device::{Device, SurfaceSize};
@@ -26,7 +25,6 @@ pub struct Player {
 impl Player {
     pub fn spawn(
         device: Res<Device>,
-        appstate: Res<AppState>,
         mut physics: ResMut<PhysicsWorld>,
         mut commands: Commands,
     ) {
@@ -35,12 +33,11 @@ impl Player {
         let znear = 0.1;
         let zfar = 100.0;
         let fov = 45.0;
-        let webxr = appstate.webxr;
 
         let camera = Camera::new(
             device.surface_size().width as u32,
             device.surface_size().height as u32, 
-            fov, znear, zfar, webxr
+            fov, znear, zfar
         );
         let mut transform = Transform::from_position(pos);
         transform.look_at(Vec3f::from_element(0.0));

@@ -12,7 +12,6 @@ pub struct Device {
     surface_config: wgpu::SurfaceConfiguration,
     device: wgpu::Device,
     queue: wgpu::Queue,
-    depth_tex: Texture,
 }
 
 impl Device {
@@ -42,6 +41,9 @@ impl Device {
                     // we're building for the web we'll have to disable some.
                     limits: if cfg!(target_arch = "wasm32") {
                         Limits {
+                            // Max texture dimension is limited to 2048 for downlevel, but
+                            // the WebXR frame buffer for stereo can be larger (at least on desktop in Chrome)
+                            // TODO: What about other types of texture?
                             max_texture_dimension_2d: 4096,    
                             ..wgpu::Limits::downlevel_webgl2_defaults()
                         }
@@ -81,27 +83,19 @@ impl Device {
         };
         surface.configure(&device, &surface_config);
 
-        let depth_tex = Texture::create_depth_texture(&device, 
-                            surface_size.width, surface_size.height, "depth_texture");
-
-
         Self {
             surface_config,
             surface,
             device,
             queue,
-            depth_tex,
         }
     }
 
-    pub fn resize(&mut self, new_size: SurfaceSize) {
-        if new_size.width > 0 && new_size.height > 0 {
-            self.surface_config.width = new_size.width;
-            self.surface_config.height = new_size.height;
+    pub fn resize(&mut self, width: u32, height: u32) {
+        if width > 0 && height > 0 {
+            self.surface_config.width = width;
+            self.surface_config.height = height;
             self.surface.configure(&self.device, &self.surface_config);
-            self.depth_tex = Texture::create_depth_texture(&self.device, 
-                                    new_size.width, new_size.height, "depth_texture");
-                //Texture::new_depth(&self.device, Self::DEPTH_TEX_FORMAT, new_size.into());
         }
     }
 
@@ -119,10 +113,6 @@ impl Device {
 
     pub fn surface(&self) -> &wgpu::Surface {
         &self.surface
-    }
-
-    pub fn depth_tex(&self) -> &Texture {
-        &self.depth_tex
     }
 }
 

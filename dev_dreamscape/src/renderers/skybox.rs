@@ -3,7 +3,7 @@ use crate::{
     assets::Assets, 
     components::{Camera,Transform},
     device::Device,
-    math::{Mat4,Rect},
+    math::Mat4,
     renderers::shader_utils,
     texture::Texture,
 };
@@ -30,7 +30,6 @@ impl SkyboxPass {
         device: &Device,
         assets: &Assets,
         color_format: wgpu::TextureFormat,
-        webxr: bool
     ) -> Self {
 
         let uniform = Uniform{view_proj_inv: Mat4::identity().into()};
@@ -51,15 +50,8 @@ impl SkyboxPass {
         let mut shader_composer = shader_utils::init_composer();
         let render_pipeline = {
 
-            // let primitive = wgpu::PrimitiveState {
-            //     topology: wgpu::PrimitiveTopology::TriangleList,
-            //     front_face: wgpu::FrontFace::Cw,
-            //     cull_mode: Some(wgpu::Face::Back),
-            //     ..Default::default()
-            // };
-
             let primitive = wgpu::PrimitiveState {
-                front_face: wgpu::FrontFace::Cw,
+                front_face: wgpu::FrontFace::Ccw,
                 ..Default::default()
             };
 
@@ -70,7 +62,7 @@ impl SkyboxPass {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                     label: Some("Skybox Shader"),
                     source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
-                        shader_utils::load_shader!(&mut shader_composer, "skybox.wgsl", webxr, None)
+                        shader_utils::load_shader!(&mut shader_composer, "skybox.wgsl", None)
                 ))};
                 let shader_module = device.create_shader_module(shader_desc);
 
@@ -114,7 +106,6 @@ impl SkyboxPass {
         color_view: &wgpu::TextureView,
         device: &Device,
         camera: (&Camera, &Transform),
-        viewport: &Option<Rect>,
         clear_color: bool
     ) -> wgpu::CommandBuffer {
 
@@ -155,12 +146,6 @@ impl SkyboxPass {
                 })],
                 depth_stencil_attachment: None
             });
-
-            //used for the XR rendering
-            match viewport {
-                Some(v) => { render_pass.set_viewport(v.x, v.y, v.w, v.h, 0.0, 1.0); }
-                _ => {}
-            };
             
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
