@@ -4,8 +4,7 @@ use bevy_ecs::prelude::*;
 use rapier3d::prelude::*;
 use crate::assets::{CollisionModel};
 //use crate::components::grab::Grab;
-use crate::math::{Vec2, Vec3, Vec3f, to_point};
-use rapier3d::prelude::{Point,Real};
+use crate::math::{Vec3f, to_point};
 
 #[derive(Component)]
 pub struct PhysicsBody {

@@ -1,7 +1,6 @@
 use crate::components::transform::Transform;
-use crate::components::{PhysicsBody, PhysicsBodyParams, Player};
+use crate::components::{PhysicsBody, PhysicsBodyParams};
 use crate::components::ModelSpec;
-use crate::input::Input;
 use crate::math::{Vec3f,UnitQuatf,UnitVec3f};
 use crate::assets::Assets;
 use crate::physics_world::PhysicsWorld;
@@ -98,14 +97,14 @@ impl Rock {
 
     fn new_component(
         model_label: String,
-        collision_model_label: String,
+        _collision_model_label: String,
         pos: Vec3f,
         scale: Vec3f,
         rotation_axis: Vec3f,
         rotation_angle: f32,
         lin_vel: Option<Vec3f>,
         ang_vel: Option<Vec3f>,
-        assets: &Assets,
+        _assets: &Assets,
         physics: &mut PhysicsWorld,
     ) -> (Rock, PhysicsBody, Transform, ModelSpec) {
 
@@ -117,8 +116,9 @@ impl Rock {
         
         //println!("looking for collision_model {}", &collision_model_label);
 
-        let collision_model =  assets.collision_model_store.get(
-                                    &collision_model_label).unwrap();
+        //Collider circle works just fine
+        //let collision_model =  assets.collision_model_store.get(
+        //                            &collision_model_label).unwrap();
 
         let physics_body = PhysicsBody::new(
             PhysicsBodyParams {

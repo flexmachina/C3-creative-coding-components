@@ -299,7 +299,7 @@ pub async fn load_collision_model(file_name: &str) -> anyhow::Result<CollisionMo
 
     let file_folder = Path::new(&file_name).parent().unwrap();
 
-    let (models, obj_materials) = tobj::load_obj_buf_async(
+    let (models, _obj_materials) = tobj::load_obj_buf_async(
         &mut obj_reader,
         &tobj::LoadOptions {
             triangulate: true,
@@ -316,7 +316,7 @@ pub async fn load_collision_model(file_name: &str) -> anyhow::Result<CollisionMo
     let collision_meshes = models
         .into_iter()
         .map(|m| {
-            let mut vertices = (0..m.mesh.positions.len() / 3)
+            let vertices = (0..m.mesh.positions.len() / 3)
                 .map(|i| Vec3f::new(
                         m.mesh.positions[i * 3] as f32,
                         m.mesh.positions[i * 3 + 1] as f32,

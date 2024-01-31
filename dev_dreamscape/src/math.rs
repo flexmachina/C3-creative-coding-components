@@ -41,7 +41,7 @@ pub struct Rect {
 }
 
 
-pub fn sRGBtolinearRGB(color: Vec3f)-> Vec3f {
+pub fn s_rgbtolinear_rgb(color: Vec3f)-> Vec3f {
     let color_convert = |val: f32| -> f32 {
         (val/255.).powf(2.2)
     };
