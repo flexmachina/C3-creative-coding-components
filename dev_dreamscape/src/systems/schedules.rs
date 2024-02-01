@@ -29,7 +29,7 @@ use crate::components::PhysicsBody;
 #[derive(ScheduleLabel, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct SpawnLabel;
 
-pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
+pub fn new_spawn_scene_schedule(webxr: bool) -> (Schedule, SpawnLabel) {
     let mut schedule = Schedule::default();
     schedule
         //.add_system(Assets::load.run_if(run_once()))
@@ -39,9 +39,12 @@ pub fn new_spawn_scene_schedule() -> (Schedule, SpawnLabel) {
         .add_systems(Rock::spawn_rock_field.run_if(run_once()))
         .add_systems(FloorBox::spawn.run_if(run_once()))
         .add_systems(Player::spawn.run_if(run_once()))
-        .add_systems(PlayerHands::spawn.run_if(run_once()))
         .add_systems(Light::spawn.run_if(run_once()));
         //.add_system(PlayerTarget::spawn.run_if(run_once()))
+
+    if webxr {
+        schedule.add_systems(PlayerHands::spawn.run_if(run_once()));
+    }
     (schedule, SpawnLabel)
 }
 

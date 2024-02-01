@@ -156,7 +156,7 @@ impl App {
         */
 
 
-        let spawn_scene_schedule = new_spawn_scene_schedule();
+        let spawn_scene_schedule = new_spawn_scene_schedule(webxr);
         world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
         let preupdate_schedule = new_preupdate_schedule();
         world.add_schedule(preupdate_schedule.0, preupdate_schedule.1);
