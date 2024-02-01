@@ -28,7 +28,7 @@ impl Player {
         mut physics: ResMut<PhysicsWorld>,
         mut commands: Commands,
     ) {
-        let pos = Vec3f::new(7.0, 7.0, 7.0);
+        let pos = Vec3f::new(0.0, 1.7, 0.0);
 
         let znear = 0.1;
         let zfar = 100.0;
@@ -40,7 +40,7 @@ impl Player {
             fov, znear, zfar
         );
         let mut transform = Transform::from_position(pos);
-        transform.look_at(Vec3f::from_element(0.0));
+        transform.look_at(Vec3f::new(0., 0., -100.));
 
         let collider = ColliderBuilder::ball(0.5)
             .restitution(0.1)

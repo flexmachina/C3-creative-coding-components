@@ -18,7 +18,7 @@ impl FloorBox {
         //let modelspec = ModelSpec::new(String::from("moon_surface/moon_surface.obj"));
         let modelspec = ModelSpec::new(String::from("mars_surface/Crater.obj"));
 
-        let pos = Vec3f::new(0.0, -2., 0.0);
+        let pos = Vec3f::new(0.0, -9., 0.0);
         let rot = UnitQuatf::identity();
         //let scale = Vec3f::new(100.0, 0.5, 100.0);
         let scale = Vec3f::new(0.5, 0.5, 0.5);

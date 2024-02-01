@@ -14,7 +14,7 @@ impl FreeBox {
         mut commands: Commands,
         mut physics: ResMut<PhysicsWorld>,
     ) {
-        let pos = Vec3f::y_axis().xyz() * 10.0;
+        let pos = Vec3f::new(0., 10., 0.);
         commands.spawn(Self::new_components(pos, &mut physics));
     }
 
