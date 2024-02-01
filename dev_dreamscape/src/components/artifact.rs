@@ -2,7 +2,7 @@ use crate::components::transform::Transform;
 use crate::components::{PhysicsBody, PhysicsBodyParams};
 use crate::components::ModelSpec;
 use crate::math::{Vec3f,UnitQuatf};
-use crate::assets::{Assets};
+use crate::assets::Assets;
 use crate::physics_world::PhysicsWorld;
 use bevy_ecs::prelude::*;
 
