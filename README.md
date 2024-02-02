@@ -1,6 +1,9 @@
 # C3-creative-coding-components
 WASM based tools for creative coders to generate 3D & XR art experiences
 
+# Usage
+Refer to README in dreamscape folder
+
 # Status
 - Platforms
     - Desktop (using winit) ✅ 
