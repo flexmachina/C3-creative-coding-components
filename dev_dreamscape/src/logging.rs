@@ -1,7 +1,3 @@
-#[allow(unused_imports)]
-use log::warn;
-
-
 pub fn init_logging() {
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
@@ -14,15 +10,6 @@ pub fn init_logging() {
     }
 }
 
-
-
 pub fn printlog(log_str: &str) {
-    cfg_if::cfg_if! {
-        if #[cfg(target_arch = "wasm32")] {
-            warn!("{}",log_str);
-        } else {
-            println!("{}",log_str);
-        }
-    }
+    log::warn!("{}", log_str);
 }
-
