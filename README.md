@@ -2,7 +2,7 @@
 WASM based tools for creative coders to generate 3D & XR art experiences
 
 # Usage
-Refer to README in dreamscape folder
+Instructions [here](https://github.com/flexmachina/C3-creative-coding-components/tree/main/dev_dreamscape)
 
 # Status
 - Platforms
