@@ -23,7 +23,10 @@ Instructions [here](https://github.com/flexmachina/C3-creative-coding-components
 - Controller input
     - Desktop (using winit) ✅
     - Web (using winit) ✅
-    - WebXR (via WebXR API) ⏹️
+    - WebXR (via WebXR API) 
+        - Movement tracking via headset ✅
+        - Hand tracking ✅
+        - Movement via controller ⏹️
 - Audio
     - Audio import ⏹️ 
     - Audio controller ⏹️
