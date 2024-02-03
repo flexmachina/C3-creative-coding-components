@@ -67,48 +67,10 @@ impl App {
         world.init_resource::<Schedules>();
 
         printlog("running run_app - created world");
-        //init_app(&mut world).await;
-        printlog("running run_app - run init_app");
-
-        println!("running init_app - started");
-        printlog("running init_app - created logger");
-
-        printlog("running init_app - created window");
-
-        /*
-        #[cfg(target_arch = "wasm32")]
-        {
-            // Winit prevents sizing with CSS, so we have to set
-            // the size manually when on web.
-            use winit::dpi::PhysicalSize;
-            window.set_inner_size(PhysicalSize::new(450, 400));
-
-            use winit::platform::web::WindowExtWebSys;
-            web_sys::window()
-                .and_then(|win| win.document())
-                .and_then(|doc| {
-                    let dst = doc.get_element_by_id("wasm-example")?;
-                    let canvas = web_sys::Element::from(window.canvas());
-                    dst.append_child(&canvas).ok()?;
-                    Some(())
-                })
-                .expect("Couldn't append canvas to document body.");
-        }
-         */
-
-        //let device = pollster::block_on(async {
-        //    Device::new(&window).await
-        //});
         let device = Device::new(&window).await;
 
         printlog("running init_app - loading assets outside schedule");
-        //let assets = Assets::load_and_return(&device);
         let assets = Assets::load_and_return(&device).await;
-        /*
-        let assets = pollster::block_on(async {
-            Assets::load_and_return(&device).await
-        });
-        */
         let renderers = Renderers::init();
         printlog("running init_app - done loading assets outside schedule");
 
@@ -319,18 +281,17 @@ impl Experience {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn setup_window_canvas(window: &Window) {
+fn setup_window_canvas(window: &Window, surface_size: SurfaceSize) {
 
     // Winit prevents sizing with CSS, so we have to set
     // the size manually when on web.
-    use winit::dpi::PhysicalSize;
-    window.set_inner_size(PhysicalSize::new(2048, 1024));
+    window.set_inner_size(surface_size);
 
     use winit::platform::web::WindowExtWebSys;
     web_sys::window()
         .and_then(|win| win.document())
         .and_then(|doc| {
-            let dst = doc.get_element_by_id("wasm-example")?;
+            let dst = doc.get_element_by_id("dreamscape")?;
             let canvas = web_sys::Element::from(window.canvas());
             canvas.set_id("canvas");
             dst.append_child(&canvas).ok()?;
@@ -347,33 +308,22 @@ pub async fn run_experience(webxr: bool) {
     let event_loop = EventLoop::new();
     printlog("running init_app - created event_loop");
 
+    let surface_size = SurfaceSize::new(1900, 1200);
+
     let window = WindowBuilder::new()
-        .with_title("Demo")
-        .with_inner_size(SurfaceSize::new(1900, 1200))
+        .with_title("Dreamscape")
+        .with_inner_size(surface_size)
         .build(&event_loop)
         .unwrap();
 
     #[cfg(target_arch = "wasm32")]
     {
-        setup_window_canvas(&window);
+        setup_window_canvas(&window, surface_size);
     }
     printlog("running init_app - created window");
 
     let experience = Experience::new(window, webxr).await;
     printlog("running init_app - created experience");
-
-    //Not sure why this was done? Adding event_loop resource and then removing it again
-    //I don't think is needed anymore
-    /*
-    let mut event_loop = world
-        .remove_non_send_resource::<EventLoop<()>>()
-        .unwrap();
-    */
-
-
-
-
-
 
     let event_handler = move |event: Event<()> , _: &EventLoopWindowTarget<()>, 
                              control_flow: &mut ControlFlow| {
