@@ -9,6 +9,7 @@ use js_sys::{Object, Reflect};
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 
+use crate::logging::printlog;
 use crate::math::{Mat4, Mat4f, Quat, Rect, Vec3f, UnitQuat};
 use crate::xr::utils;
 
@@ -78,24 +79,18 @@ fn create_webgl_context(xr_mode: bool) -> Result<WebGl2RenderingContext, JsValue
 }
 
 pub struct WebXRApp {
-    session: Rc<RefCell<Option<XrSession>>>,
-    ref_space: Rc<RefCell<Option<XrReferenceSpace>>>,
+    session: Rc<RefCell<XrSession>>,
+    ref_space: Rc<RefCell<XrReferenceSpace>>,
     gl: Rc<WebGl2RenderingContext>,
-    app: Rc<RefCell<crate::app::App>>,
 }
 
 impl WebXRApp {
-    pub fn new(app: Rc<RefCell<crate::app::App>>) -> Self {
+    pub async fn new() -> Self {
+        printlog("Starting WebGL2 for WebXR");
 
-        let session = Rc::new(RefCell::new(None));
-        let ref_space = Rc::new(RefCell::new(None));
-        let xr_mode = true;
-        let gl = Rc::new(create_webgl_context(xr_mode).unwrap());
-        Self { session, ref_space, gl, app: app.clone() }
-    }
+        let gl = Rc::new(create_webgl_context(true).unwrap());
 
-    pub async fn init(&self) {
-        info!("Starting WebXR...");
+        printlog("Starting WebXR...");
         let navigator: web_sys::Navigator = web_sys::window().unwrap().navigator();
         let xr = navigator.xr();
         // XrSessionMode::ImmersiveVr seems work now
@@ -107,8 +102,7 @@ impl WebXRApp {
             wasm_bindgen_futures::JsFuture::from(session_supported_promise).await;
         let supports_session = supports_session.unwrap();
         if supports_session == false {
-            info!("XR session not supported");
-            return ();
+            panic!("XR session not supported");
         }
 
         let mut session_init = XrSessionInit::new();
@@ -124,7 +118,7 @@ impl WebXRApp {
         
         // Since we're dealing with multiple sessions now we need to track
 
-        let xr_gl_layer = XrWebGlLayer::new_with_web_gl2_rendering_context(&xr_session, &self.gl).unwrap();
+        let xr_gl_layer = XrWebGlLayer::new_with_web_gl2_rendering_context(&xr_session, &gl).unwrap();
         let mut render_state_init = XrRenderStateInit::new();
         render_state_init.base_layer(Some(&xr_gl_layer));
         xr_session.update_render_state_with_state(&render_state_init);
@@ -132,17 +126,18 @@ impl WebXRApp {
         let ref_space_promise = xr_session.request_reference_space(ref_space_type);
         let ref_space = wasm_bindgen_futures::JsFuture::from(ref_space_promise).await;
         let ref_space: XrReferenceSpace = ref_space.unwrap().into();
-        self.session.borrow_mut().replace(xr_session);
-        self.ref_space.borrow_mut().replace(ref_space);
 
-        self.start();
+        let session = Rc::new(RefCell::new(xr_session));
+        let ref_space = Rc::new(RefCell::new(ref_space));
+
+        Self { session, ref_space, gl }
     }
 
-    fn start(&self) {
+    pub fn start(&self, app: Rc<RefCell<crate::app::App>>) {
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();
 
-        let app = self.app.clone();
+        let app = app.clone();
         let gl = self.gl.clone();
         let ref_space = self.ref_space.clone();
         let last_frame_time = Rc::new(RefCell::new(0.));
@@ -150,8 +145,7 @@ impl WebXRApp {
         *g.borrow_mut() = Some(Closure::new(move | time: f64, frame: XrFrame| {
             let sess: XrSession = frame.session();
             let mut app = app.borrow_mut();
-            let ref_space = ref_space.borrow_mut();
-            let ref_space = ref_space.as_ref().unwrap();
+            let ref_space = &ref_space.borrow_mut();
 
             // Get hand poses and send to app
             for i in 0..sess.input_sources().length() {
@@ -256,13 +250,8 @@ impl WebXRApp {
             request_animation_frame(&sess, f.borrow().as_ref().unwrap());
         }));
 
-        let session: &Option<XrSession> = &self.session.borrow();
-        let sess: &XrSession = if let Some(sess) = session {
-            sess
-        } else {
-            return ();
-        };
-        request_animation_frame(sess, g.borrow().as_ref().unwrap());
+        let session = &self.session.borrow();
+        request_animation_frame(session, g.borrow().as_ref().unwrap());
     }
 }
 

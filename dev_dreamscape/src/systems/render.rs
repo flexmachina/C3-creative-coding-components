@@ -50,7 +50,6 @@ pub fn render_to_texture(
     camera_qry: Query<(&Camera, &Transform), With<Player>>,
     meshes_qry: Query<(&ModelSpec, &Transform)>,
     lights_qry: Query<(&Light, &Transform)>,
-    //                                         
     color_texture: &wgpu::Texture,
     viewport: Option<Rect>,
     clear: bool) {
@@ -102,6 +101,9 @@ pub fn render_to_texture(
             Some(vp) => (vp.w as u32, vp.h as u32),
             None => (color_texture.width(), color_texture.height())
         };
+        if target_width == 0 || target_height == 0 {
+            return;
+        }
         if (hdr_pipeline.texture().width(), hdr_pipeline.texture().height()) != (target_width, target_height) {
             hdr_pipeline.resize(device, target_width, target_height);
         } 

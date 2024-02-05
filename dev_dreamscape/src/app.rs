@@ -69,19 +69,7 @@ impl App {
         printlog("running run_app - created world");
         let device = Device::new(&window).await;
 
-        printlog("running init_app - loading assets outside schedule");
-        let assets = Assets::load_and_return(&device).await;
-        let renderers = Renderers::init();
-        printlog("running init_app - done loading assets outside schedule");
-
-        world.init_resource::<Events<WindowResizeEvent>>();
-        world.init_resource::<Events<KeyboardEvent>>();
-        world.init_resource::<Events<MouseEvent>>();
-        world.init_resource::<Events<FrameTimeEvent>>();
-        world.init_resource::<Events<HandUpdateEvent>>();
-        world.init_resource::<Events<CameraSetEvent>>();
-
-        //world.insert_non_send_resource(event_loop);
+        world.insert_resource(device);
         world.insert_non_send_resource(window);
 
         world.insert_resource(AppState {
@@ -89,13 +77,19 @@ impl App {
             webxr: webxr,
             frametime_manual: webxr
         });
-        world.insert_resource(device);
-        world.insert_resource(assets);
         //NOTE not sure if this ok as just init_resource
-        world.insert_resource(renderers);
+        world.insert_resource(Renderers::init());
         world.insert_resource(FrameTime::new());
         world.insert_resource(Input::new());
         world.insert_resource(PhysicsWorld::new());
+
+        // Events
+        world.init_resource::<Events<WindowResizeEvent>>();
+        world.init_resource::<Events<KeyboardEvent>>();
+        world.init_resource::<Events<MouseEvent>>();
+        world.init_resource::<Events<FrameTimeEvent>>();
+        world.init_resource::<Events<HandUpdateEvent>>();
+        world.init_resource::<Events<CameraSetEvent>>();
 
         /*
         let world_systemstate: SystemState<(
@@ -117,7 +111,7 @@ impl App {
         });
         */
 
-
+        // Schedules
         let spawn_scene_schedule = new_spawn_scene_schedule(webxr);
         world.add_schedule(spawn_scene_schedule.0, spawn_scene_schedule.1);
         let preupdate_schedule = new_preupdate_schedule();
@@ -136,6 +130,12 @@ impl App {
         }
     }
 
+    pub async fn load_assets(&mut self) {
+        printlog("Loading assets outside schedule");
+        let assets = Assets::load_and_return(&self.world.resource::<Device>()).await;
+        printlog("Done loading assets outside schedule");
+        self.world.insert_resource(assets);
+    }
 
     fn world_systemstate_get_mut(&mut self) -> (NonSend<Window>,Res<Device>,Res<Assets>,
                                 ResMut<Renderers>,//NonSendMut<EventLoop<()>>,
@@ -259,24 +259,32 @@ pub struct Experience {
 
 impl Experience {
     async fn new(window: Window, webxr: bool) -> Self {
-        // App::new uses async code, so we're going to wait for it to finish
-        let app = App::new(window, webxr).await;
-        let app = Rc::new(RefCell::new(app));
+        let mut app = App::new(window, webxr).await;
         #[cfg(target_arch = "wasm32")]
         {
-            let xr_app = if webxr {
-                let xr_app = WebXRApp::new(app.clone());
-                xr_app.init().await;
-                Some(xr_app)
+            if webxr {
+                // Ensure WebXRApp is created before
+                // loading assets, which currently takes several seconds. 
+                // This is so the XrSession is requested as soon as possible after
+                // the user interaction that triggers the wasm to load.
+                // If there is more than a few second delay, a Security error occurs.
+                let xr_app = WebXRApp::new().await;
+                app.load_assets().await;
+                let app = Rc::new(RefCell::new(app));
+                xr_app.start(app.clone());
+                Self{app, xr_app: Some(xr_app)}    
             } else {
-                None
-            };
-            Self{app, xr_app}
-        }        
+                app.load_assets().await;
+                let app = Rc::new(RefCell::new(app));    
+                Self{app, xr_app: None}
+            }
+        }    
         #[cfg(not(target_arch = "wasm32"))]
         {
+            app.load_assets().await;
+            let app = Rc::new(RefCell::new(app));
             Self{app}
-        }
+        }        
     }
 }
 
