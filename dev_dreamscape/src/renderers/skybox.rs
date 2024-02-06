@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use wgpu::util::DeviceExt;
 use crate::{
-    assets::Assets, 
     components::{Camera,Transform},
     device::Device,
     math::Mat4,
@@ -20,7 +21,8 @@ struct Uniform {
 
 pub struct SkyboxPass {
     render_pipeline: wgpu::RenderPipeline,
-    texture_bind_group: wgpu::BindGroup,
+    texture_bind_group_layout: wgpu::BindGroupLayout,
+    texture_bind_groups: HashMap<String, wgpu::BindGroup>,
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
 }
@@ -28,7 +30,6 @@ pub struct SkyboxPass {
 impl SkyboxPass {
     pub fn new(
         device: &Device,
-        assets: &Assets,
         color_format: wgpu::TextureFormat,
     ) -> Self {
 
@@ -37,8 +38,8 @@ impl SkyboxPass {
         let (uniform_bind_group_layout, uniform_bind_group, uniform_buffer) =
             new_uniform_bind_group(device, bytemuck::cast_slice(&[uniform]));
 
-        let (texture_bind_group_layout, texture_bind_group) =
-            new_texture_bind_group(device, &assets.skybox_tex, wgpu::TextureViewDimension::Cube);
+        let texture_bind_group_layout = 
+            new_texture_bind_group_layout(device, wgpu::TextureViewDimension::Cube);
 
         let pipeline_layout = device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -93,7 +94,8 @@ impl SkyboxPass {
 
         Self {
             render_pipeline,
-            texture_bind_group,
+            texture_bind_group_layout,
+            texture_bind_groups: Default::default(),
             uniform_buffer,
             uniform_bind_group,
         }
@@ -106,6 +108,7 @@ impl SkyboxPass {
         color_view: &wgpu::TextureView,
         device: &Device,
         camera: (&Camera, &Transform),
+        texture: (&str, &Texture),
         clear_color: bool
     ) -> wgpu::CommandBuffer {
 
@@ -125,6 +128,28 @@ impl SkyboxPass {
             bytemuck::cast_slice(&[uniform]),
         );
 
+        // Bindgroup  management
+        let texture_bind_group_layout = &self.texture_bind_group_layout;
+        let texture_bind_group = self.texture_bind_groups
+            .entry(texture.0.to_string())
+            .or_insert_with(|| {
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("[Skybox] Texture"),
+                    layout: &texture_bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&texture.1.view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&texture.1.sampler),
+                        },
+                    ],
+                })
+            });
+            
+    
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Skybox Encoder"),
         });
@@ -149,57 +174,38 @@ impl SkyboxPass {
             
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.uniform_bind_group, &[]);
-            render_pass.set_bind_group(1, &self.texture_bind_group, &[]);
+            render_pass.set_bind_group(1, &texture_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
         encoder.finish()
     }
 }
 
-pub fn new_texture_bind_group(
+pub fn new_texture_bind_group_layout(
     device: &Device,
-    texture: &Texture,
     view_dimension: wgpu::TextureViewDimension,
-) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
-    let layout = device
-        .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: None,
-        });
-
-    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-        layout: &layout,
+) -> wgpu::BindGroupLayout {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         entries: &[
-            wgpu::BindGroupEntry {
+            wgpu::BindGroupLayoutEntry {
                 binding: 0,
-                resource: wgpu::BindingResource::TextureView(&texture.view),
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    multisampled: false,
+                    view_dimension,
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                },
+                count: None,
             },
-            wgpu::BindGroupEntry {
+            wgpu::BindGroupLayoutEntry {
                 binding: 1,
-                resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
             },
         ],
         label: None,
-    });
-
-    (layout, group)
+    })
 }
 
 pub fn new_uniform_bind_group(

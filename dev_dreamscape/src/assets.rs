@@ -13,7 +13,6 @@ use crate::math::{Vec2, Vec3, Vec3f, to_point};
 use rapier3d::prelude::{Point,Real};
 
 use crate::logging::printlog;
-use crate::renderers::{HdrPipeline, PhongPass, SkyboxPass};
 
 use std::path::Path;
 
@@ -365,7 +364,7 @@ pub async fn load_collision_model(file_name: &str) -> anyhow::Result<CollisionMo
 // TODO Load also shaders, meshes, etc.
 #[derive(Resource)]
 pub struct Assets {
-    pub skybox_tex: texture::Texture,
+    pub texture_store: HashMap<String,texture::Texture>,
     pub model_store: HashMap<String,model::Model>,
     pub collision_model_store: HashMap<String,CollisionModel>,
 }
@@ -393,6 +392,9 @@ impl Assets {
             "Rock2/Rock2-collider.obj",
         ];
 
+        let cubemap_paths = vec![
+            "skyboxes/planet_atmosphere" // dir of pngs
+        ];
 
         let mut model_store = HashMap::new();
         for model_path in model_paths {
@@ -406,34 +408,21 @@ impl Assets {
             collision_model_store.insert(collision_model_path.to_string(), model);
         }
 
-        let skybox_tex = texture::Texture::load_cubemap_from_pngs(
-                "skyboxes/planet_atmosphere", &device, &device.queue()).await;
+        let mut texture_store = HashMap::new();
+        for cubemap_path in cubemap_paths {
+            let texture = texture::Texture::load_cubemap_from_pngs(
+                cubemap_path,
+                &device,
+                &device.queue()).await;
+                texture_store.insert(cubemap_path.to_string(), texture);
+        }
+
         Self {
-            skybox_tex,
+            texture_store,
             model_store,
             collision_model_store
         }
     }
 
 
-}
-
-
-
-// TODO Load also shaders, meshes, etc.
-#[derive(Resource)]
-pub struct Renderers {
-    pub skybox_renderer: Option<SkyboxPass>,
-    pub phong_renderer: Option<PhongPass>,
-    pub hdr_pipeline: Option<HdrPipeline>,
-}
-
-impl Renderers {
-    pub fn init() -> Self {
-        Self {
-            skybox_renderer: None, 
-            phong_renderer: None,
-            hdr_pipeline: None,
-        }
-    }
 }

@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use crate::math::Rect;
-use crate::components::{Camera, Transform, Player, ModelSpec, Light};
-use crate::assets::{Assets,Renderers};
-use crate::app::AppState;
+use crate::components::{Camera, Light, ModelSpec, Player, Skybox, Transform};
+use crate::assets::Assets;
 use crate::model::Model;
 use crate::renderers::{HdrPipeline, SkyboxPass, PhongConfig, PhongPass};
 
@@ -11,43 +10,52 @@ use crate::device::Device;
 use bevy_ecs::prelude::*;
 
 
-pub fn prepare_render_pipelines(
-    device: Res<Device>,
-    assets: Res<Assets>,
-    appstate: Res<AppState>,
-    mut renderers: ResMut<Renderers>,
-) {
-    let webxr = appstate.webxr;
-
-    renderers.hdr_pipeline = Some(HdrPipeline::new(
-        &device,
-        device.surface_size().width,
-        device.surface_size().height,
-        device.surface_texture_format(),
-        webxr
-    ));
-
-    let format = renderers.hdr_pipeline.as_mut().unwrap().format();
-
-    renderers.skybox_renderer = Some(SkyboxPass::new(
-        &device,
-        &assets,
-        format,
-    ));
-
-    renderers.phong_renderer = Some(PhongPass::new(
-        &PhongConfig { wireframe: false },
-        &device,
-        format,
-    ));
+// TODO Load also shaders, meshes, etc.
+#[derive(Resource)]
+pub struct Renderers {
+    pub skybox_renderer: SkyboxPass,
+    pub phong_renderer: PhongPass,
+    pub hdr_pipeline: HdrPipeline,
 }
 
+impl Renderers {
+    pub fn new(device: &Device, webxr: bool) -> Self {
+        
+        let hdr_pipeline = HdrPipeline::new(
+            &device,
+            device.surface_size().width,
+            device.surface_size().height,
+            device.surface_texture_format(),
+            webxr
+        );
+    
+        let color_format = hdr_pipeline.format();
+    
+        let skybox_renderer = SkyboxPass::new(
+            &device,
+            color_format,
+        );
+    
+        let phong_renderer = PhongPass::new(
+            &PhongConfig { wireframe: false },
+            &device,
+            color_format,
+        );
+
+        Self {
+            skybox_renderer, 
+            phong_renderer,
+            hdr_pipeline,
+        }
+    }
+}
 
 pub fn render_to_texture(
     device: &Device,
     assets: Res<Assets>,
     mut renderers: ResMut<Renderers>,
     camera_qry: Query<(&Camera, &Transform), With<Player>>,
+    skybox_qry: Query<&Skybox>,
     meshes_qry: Query<(&ModelSpec, &Transform)>,
     lights_qry: Query<(&Light, &Transform)>,
     color_texture: &wgpu::Texture,
@@ -55,7 +63,11 @@ pub fn render_to_texture(
     clear: bool) {
 
     let camera = camera_qry.single();
-  
+    let skybox = skybox_qry.single();
+    
+    // Get skybox texture
+    let skybox_texture =  assets.texture_store.get(&skybox.texture_name).unwrap();
+
     //
     // Gather models to render
     //
@@ -69,9 +81,6 @@ pub fn render_to_texture(
             .push(transform);
     }
 
-    //println!("instances hashmap: {:?}",instances);
-    
-
     // Lookup Model from ModelSpec and flatten to vector
     let mut nodes: Vec<(&Model, &String, Vec<&Transform>)> = vec![];
     for (modelname, transforms) in instances.into_iter() {
@@ -79,7 +88,6 @@ pub fn render_to_texture(
         let model =  assets.model_store.get(modelname).unwrap();
         nodes.push((model, modelname, transforms));
     }
-
 
     // Gather light models
     let mut lights: Vec<(&Light, &Transform)> = vec![];
@@ -96,7 +104,7 @@ pub fn render_to_texture(
     // Resize hdr_pipeline texture if needed to match viewport (if present), or
     // else the entire colour buffer.
     {
-        let hdr_pipeline = renderers.hdr_pipeline.as_mut().unwrap();
+        let hdr_pipeline = &mut renderers.hdr_pipeline;
         let (target_width, target_height) = match &viewport {
             Some(vp) => (vp.w as u32, vp.h as u32),
             None => (color_texture.width(), color_texture.height())
@@ -111,23 +119,22 @@ pub fn render_to_texture(
 
     // Need to create new views as the borrow checker complains about about multiple refs.
     // TODO: find a better solution
-    let hdr_view = renderers.hdr_pipeline.as_mut().unwrap().texture().create_view(&wgpu::TextureViewDescriptor::default());
+    let hdr_view = renderers.hdr_pipeline.texture().create_view(&wgpu::TextureViewDescriptor::default());
     let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let depth_view = renderers.hdr_pipeline.as_mut().unwrap().depth_texture().create_view(&wgpu::TextureViewDescriptor::default());
+    let depth_view = renderers.hdr_pipeline.depth_texture().create_view(&wgpu::TextureViewDescriptor::default());
 
     // Skypass pass
     // TODO: Use Skybox Query to make skybox config dynamic
-    let skybox_renderer = renderers.skybox_renderer.as_mut().unwrap();
-    let skybox_cmd_buffer = skybox_renderer.draw(
+    let skybox_cmd_buffer = renderers.skybox_renderer.draw(
         &hdr_view,
         &device,
         camera,
+        (&skybox.texture_name, &skybox_texture),
         true,
     );
 
     // Phong pass
-    let phong_renderer = renderers.phong_renderer.as_mut().unwrap();
-    let phong_cmd_buffer = phong_renderer.draw(
+    let phong_cmd_buffer = renderers.phong_renderer.draw(
         &hdr_view,
         &depth_view,
         &device,
@@ -140,8 +147,7 @@ pub fn render_to_texture(
         true,
     );
 
-    let hdr_pipeline = renderers.hdr_pipeline.as_mut().unwrap();
-    let hdr_cmd_buffer = hdr_pipeline.process(&device, &color_view, viewport);
+    let hdr_cmd_buffer = renderers.hdr_pipeline.process(&device, &color_view, viewport);
 
     device.queue().submit([
         skybox_cmd_buffer,
@@ -157,6 +163,7 @@ pub fn render(
     assets: Res<Assets>,
     renderers: ResMut<Renderers>,
     camera_qry: Query<(&Camera, &Transform), With<Player>>,
+    skybox_qry: Query<&Skybox>,
     meshes_qry: Query<(&ModelSpec, &Transform)>,
     lights_qry: Query<(&Light, &Transform)>,
 ) {
@@ -168,6 +175,7 @@ pub fn render(
                 assets,
                 renderers,
                 camera_qry,
+                skybox_qry,
                 meshes_qry,
                 lights_qry,
                 &surface_texture.texture,

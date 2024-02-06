@@ -10,7 +10,6 @@ use crate::systems::{
         update_frame_time,
         update_physics,
         render,
-        prepare_render_pipelines,
 };
 use crate::components::{
     FloorBox, 
@@ -33,7 +32,6 @@ pub fn new_spawn_scene_schedule(webxr: bool) -> (Schedule, SpawnLabel) {
     let mut schedule = Schedule::default();
     schedule
         //.add_system(Assets::load.run_if(run_once()))
-        .add_systems(prepare_render_pipelines.run_if(run_once()))
         .add_systems(Skybox::spawn.run_if(run_once()))
         //.add_systems(FreeBox::spawn.run_if(run_once()))
         .add_systems(Rock::spawn_rock_field.run_if(run_once()))

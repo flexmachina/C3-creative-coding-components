@@ -19,8 +19,8 @@ use winit::window::{WindowBuilder, Window};
 use winit::event::{DeviceEvent, ElementState, Event, KeyboardInput, WindowEvent};
 
 use crate::systems::*;
-use crate::assets::{Assets, Renderers};
-use crate::components::{Camera,Transform,Light,ModelSpec,Player};
+use crate::assets::Assets;
+use crate::components::{Camera, Light, ModelSpec, Player, Skybox, Transform};
 
 use crate::logging::{init_logging, printlog};
 
@@ -68,8 +68,10 @@ impl App {
 
         printlog("running run_app - created world");
         let device = Device::new(&window).await;
+        let renderers = Renderers::new(&device, webxr);
 
         world.insert_resource(device);
+        world.insert_resource(renderers);
         world.insert_non_send_resource(window);
 
         world.insert_resource(AppState {
@@ -78,7 +80,6 @@ impl App {
             frametime_manual: webxr
         });
         //NOTE not sure if this ok as just init_resource
-        world.insert_resource(Renderers::init());
         world.insert_resource(FrameTime::new());
         world.insert_resource(Input::new());
         world.insert_resource(PhysicsWorld::new());
@@ -225,10 +226,11 @@ impl App {
             Res<Assets>,
             ResMut<Renderers>,
             Query<(&Camera, &Transform), With<Player>>,
+            Query<&Skybox>,
             Query<(&ModelSpec, &Transform)>,
             Query<(&Light, &Transform)>,
         )> = SystemState::from_world(&mut self.world);
-        let (device, assets, renderers, camera_qry,meshes_qry,light_qry) = 
+        let (device, assets, renderers, camera_qry, skybox_qry, meshes_qry,light_qry) = 
                             world_w_queries_systemstate.get_mut(&mut self.world);
         
         render_to_texture(
@@ -236,6 +238,7 @@ impl App {
                 assets,
                 renderers,
                 camera_qry,
+                skybox_qry,
                 meshes_qry,
                 light_qry,
                 &color_texture,
@@ -453,9 +456,6 @@ pub async fn run_experience(webxr: bool) {
     {
         event_loop.run(event_handler);
     }
-
-
-
 }
 
 

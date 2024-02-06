@@ -3,14 +3,14 @@ use bevy_ecs::prelude::*;
 
 #[derive(Component)]
 pub struct Skybox {
-    pub config: String,
+    pub texture_name: String,
 }
 
 impl Skybox {
     pub fn spawn(mut commands: Commands) {
         commands.spawn((
             Skybox {
-                config: "placeholder".to_string()
+                texture_name: "skyboxes/planet_atmosphere".to_string()
             }, 
         ));
     }
