@@ -104,7 +104,6 @@ pub fn render_to_texture(
     // Resize hdr_pipeline texture if needed to match viewport (if present), or
     // else the entire colour buffer.
     {
-        let hdr_pipeline = &mut renderers.hdr_pipeline;
         let (target_width, target_height) = match &viewport {
             Some(vp) => (vp.w as u32, vp.h as u32),
             None => (color_texture.width(), color_texture.height())
@@ -112,9 +111,7 @@ pub fn render_to_texture(
         if target_width == 0 || target_height == 0 {
             return;
         }
-        if (hdr_pipeline.texture().width(), hdr_pipeline.texture().height()) != (target_width, target_height) {
-            hdr_pipeline.resize(device, target_width, target_height);
-        } 
+        renderers.hdr_pipeline.resize(device, target_width, target_height);
     }
 
     // Need to create new views as the borrow checker complains about about multiple refs.

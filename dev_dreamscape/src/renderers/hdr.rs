@@ -122,24 +122,30 @@ impl HdrPipeline {
         )
     }
 
-    /// Resize the HDR texture
+    // Resize the colour and depth textures if needed
     pub fn resize(&mut self, device: &wgpu::Device, width: u32, height: u32) {
-        self.texture = Self::create_color_texture(device, width, height);
-        self.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Hdr::bind_group"),
-            layout: &self.layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&self.texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&self.texture.sampler),
-                },
-            ],
-        });
-        self.depth_texture = texture::Texture::create_depth_texture(&device, width, height, "depth_texture");
+        if self.texture.texture.width() != width || self.texture.texture.height() != height {
+            log::warn!("Resizing hdr color texture: {}x{}", width, height);
+            self.texture = Self::create_color_texture(device, width, height);
+            self.bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Hdr::bind_group"),
+                layout: &self.layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&self.texture.view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&self.texture.sampler),
+                    },
+                ],
+            });
+        }
+        if self.depth_texture.texture.width() != width || self.depth_texture.texture.height() != height {  
+            log::warn!("Resizing hdr depth texture: {}x{}", width, height);
+            self.depth_texture = texture::Texture::create_depth_texture(&device, width, height, "depth_texture");
+        }
         self.width = width;
         self.height = height;
     }
