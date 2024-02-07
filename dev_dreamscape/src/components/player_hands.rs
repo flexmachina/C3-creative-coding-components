@@ -1,6 +1,7 @@
 use bevy_ecs::prelude::*;
 use bevy_hierarchy::BuildChildren;
 use bevy_hierarchy::Children;
+use rapier3d::na::Rotation3;
 
 use crate::components::Transform;
 use crate::components::ModelSpec;
@@ -66,7 +67,10 @@ impl PlayerHands {
                             // Transform::rebuild_matrix().
                             let position: Vec3f = mat.fixed_view::<3, 1>(0, 3).into();
                             let rot_mat: Mat3f = mat.fixed_view::<3, 3>(0, 0).into();
-                            let rotation = UnitQuatf::from_matrix(&rot_mat);
+                            // Note: Don't call UnitQuatf::from_matrix(&rot_mat) here as it seems to hang the
+                            // app when hands are out of view. It's an iterative algorithm that probably
+                            // doesn't handle degenerate rotations matrices.
+                            let rotation = UnitQuatf::from_rotation_matrix(&Rotation3::from_matrix_unchecked(rot_mat));
                             transform.set_pose_and_scale(position, rotation, Vec3::from_element(scale));
                         }
                     }
