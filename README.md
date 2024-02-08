@@ -1,6 +1,9 @@
 # C3-creative-coding-components
 WASM based tools for creative coders to generate 3D & XR art experiences
 
+# Usage
+Instructions [here](https://github.com/flexmachina/C3-creative-coding-components/tree/main/dev_dreamscape)
+
 # Status
 - Platforms
     - Desktop (using winit) ✅ 
@@ -20,7 +23,10 @@ WASM based tools for creative coders to generate 3D & XR art experiences
 - Controller input
     - Desktop (using winit) ✅
     - Web (using winit) ✅
-    - WebXR (via WebXR API) ⏹️
+    - WebXR (via WebXR API) 
+        - Movement tracking via headset ✅
+        - Hand tracking ✅
+        - Movement via controller ⏹️
 - Audio
     - Audio import ⏹️ 
     - Audio controller ⏹️
