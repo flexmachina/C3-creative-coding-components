@@ -1,5 +1,6 @@
 mod camera;
 mod floor_box;
+mod floor_grid;
 mod free_box;
 mod rock;
 mod light;
@@ -14,6 +15,7 @@ mod transform;
 
 pub use camera::Camera;
 pub use floor_box::FloorBox;
+pub use floor_grid::FloorGrid;
 pub use free_box::FreeBox;
 pub use rock::Rock;
 pub use light::Light;

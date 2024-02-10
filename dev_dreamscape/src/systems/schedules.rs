@@ -12,7 +12,8 @@ use crate::systems::{
         render,
 };
 use crate::components::{
-    FloorBox, 
+    FloorBox,
+    FloorGrid, 
     FreeBox,
     Light, 
     Player,
@@ -35,7 +36,7 @@ pub fn new_spawn_scene_schedule(webxr: bool) -> (Schedule, SpawnLabel) {
         .add_systems(Skybox::spawn.run_if(run_once()))
         //.add_systems(FreeBox::spawn.run_if(run_once()))
         .add_systems(Rock::spawn_rock_field.run_if(run_once()))
-        .add_systems(FloorBox::spawn.run_if(run_once()))
+        .add_systems(FloorGrid::spawn.run_if(run_once()))
         .add_systems(Player::spawn.run_if(run_once()))
         .add_systems(Light::spawn.run_if(run_once()));
         //.add_system(PlayerTarget::spawn.run_if(run_once()))
