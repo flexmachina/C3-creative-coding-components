@@ -30,12 +30,11 @@ impl Renderers {
             webxr
         );
 
-        
         let downscale_pipeline = DownscalePipeline::new(
             &device,
             device.surface_size().width,
             device.surface_size().height,
-            5,
+            6,
         );
     
         let color_format = hdr_pipeline.format();

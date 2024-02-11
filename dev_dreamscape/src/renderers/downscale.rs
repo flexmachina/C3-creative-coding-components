@@ -10,7 +10,8 @@ const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba16Float;
 
         
 pub struct DownscalePipeline {
-    pipeline: wgpu::RenderPipeline,
+    downscale_pipeline: wgpu::RenderPipeline,
+    upscale_pipeline: wgpu::RenderPipeline,
     bind_group_layout: wgpu::BindGroupLayout,
     bind_groups: Vec<wgpu::BindGroup>,
     textures: Vec<texture::Texture>,
@@ -57,8 +58,9 @@ impl DownscalePipeline {
             push_constant_ranges: &[],
         });
 
-        let pipeline = {
-            let mut shader_composer = shader_utils::init_composer();
+        let mut shader_composer = shader_utils::init_composer();
+
+        let downscale_pipeline = {
             let shader_desc = wgpu::ShaderModuleDescriptor {
                     label: Some("Downscale::shader"),
                     source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
@@ -75,8 +77,26 @@ impl DownscalePipeline {
             )
         };
 
+        let upscale_pipeline = {
+            let shader_desc = wgpu::ShaderModuleDescriptor {
+                    label: Some("Upscale::shader"),
+                    source: wgpu::ShaderSource::Naga(std::borrow::Cow::Owned(
+                        shader_utils::load_shader!(&mut shader_composer, "upscale.wgsl", None)
+                ))};
+            utils::create_render_pipeline(
+                device,
+                &pipeline_layout,
+                "Upscale::pipeline",
+                FORMAT,
+                None,
+                &[],
+                shader_desc,
+            )
+        };
+
         Self {
-            pipeline,
+            downscale_pipeline,
+            upscale_pipeline,
             bind_group_layout,
             bind_groups,
             textures,
@@ -143,7 +163,7 @@ impl DownscalePipeline {
     }
 
     pub fn bottom_texture(&self) -> &wgpu::Texture {
-        &self.textures[self.textures.len()-1].texture
+        &self.textures[1].texture
     }
 
     pub fn top_bind_group(&self) -> &wgpu::BindGroup {
@@ -151,7 +171,7 @@ impl DownscalePipeline {
     }
 
     pub fn bottom_bind_group(&self) -> &wgpu::BindGroup {
-        &self.bind_groups[self.bind_groups.len()-1]
+        &self.bind_groups[1]
     }
 
     // This renders the internal HDR texture to the supplied TextureView
@@ -163,6 +183,7 @@ impl DownscalePipeline {
         });
         
         {
+            // Downscale
             for i in 0..self.textures.len()-1 {
                 let dest = &self.textures[i+1].view;
 
@@ -179,11 +200,32 @@ impl DownscalePipeline {
                     depth_stencil_attachment: None,
                 });
 
-
-                pass.set_pipeline(&self.pipeline);
+                pass.set_pipeline(&self.downscale_pipeline);
                 pass.set_bind_group(0, &self.bind_groups[i], &[]);
                 pass.draw(0..3, 0..1);
             }
+
+            // Upscale and blur. Leave topmost texture unchanged as this is our original render
+            for i in (2..self.textures.len()).rev() {
+                let dest = &self.textures[i-1].view;
+
+                let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Downscale::render_pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &dest,
+                        resolve_target: None,
+                        ops: Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: true,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                });
+
+                pass.set_pipeline(&self.upscale_pipeline);
+                pass.set_bind_group(0, &self.bind_groups[i], &[]);
+                pass.draw(0..3, 0..1);
+            }        
         }
 
         encoder.finish()
