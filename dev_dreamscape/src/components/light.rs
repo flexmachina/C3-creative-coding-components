@@ -13,25 +13,25 @@ impl Light {
     pub fn spawn(mut commands: Commands) {
         commands.spawn((
             Light {
-                color: s_rgbtolinear_rgb(Vec3f::new(179.,56.,56.))
+                color: Vec3f::new(10.,0.,0.)
             },
             Transform::from_position(Vec3f::new(-5., 2., -5.)),
         ));
         commands.spawn((
             Light {
-                color: s_rgbtolinear_rgb(Vec3f::new(227.,181.,164.))
+                color: Vec3f::new(5.0,3.,3.)
             },
             Transform::from_position(Vec3f::new(5., 2., -5.)),
         ));
         commands.spawn((
             Light {
-                color: s_rgbtolinear_rgb(Vec3f::new(59.,195.,132.))
+                color: Vec3f::new(0.,5.,5.)
             },
             Transform::from_position(Vec3f::new(5., 2., 5.)),
         ));
         commands.spawn((
             Light {
-                color: s_rgbtolinear_rgb(Vec3f::new(243.,152.,68.))
+                color: Vec3f::new(10.,5.,0.)
             },
             Transform::from_position(Vec3f::new(-5., 2., 5.)),
         ));

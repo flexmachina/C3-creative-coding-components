@@ -4,7 +4,7 @@ use crate::math::Rect;
 use crate::components::{Camera, Light, ModelSpec, Player, Skybox, Transform};
 use crate::assets::Assets;
 use crate::model::Model;
-use crate::renderers::{HdrPipeline, SkyboxPass, PhongConfig, PhongPass};
+use crate::renderers::{DownscalePipeline, HdrPipeline, SkyboxPass, PhongConfig, PhongPass};
 
 use crate::device::Device;
 use bevy_ecs::prelude::*;
@@ -15,6 +15,7 @@ use bevy_ecs::prelude::*;
 pub struct Renderers {
     pub skybox_renderer: SkyboxPass,
     pub phong_renderer: PhongPass,
+    pub downscale_pipeline: DownscalePipeline,
     pub hdr_pipeline: HdrPipeline,
 }
 
@@ -27,6 +28,14 @@ impl Renderers {
             device.surface_size().height,
             device.surface_texture_format(),
             webxr
+        );
+
+        
+        let downscale_pipeline = DownscalePipeline::new(
+            &device,
+            device.surface_size().width,
+            device.surface_size().height,
+            5,
         );
     
         let color_format = hdr_pipeline.format();
@@ -45,6 +54,7 @@ impl Renderers {
         Self {
             skybox_renderer, 
             phong_renderer,
+            downscale_pipeline,
             hdr_pipeline,
         }
     }
@@ -111,12 +121,14 @@ pub fn render_to_texture(
         if target_width == 0 || target_height == 0 {
             return;
         }
+
+        renderers.downscale_pipeline.resize(device, target_width, target_height);
         renderers.hdr_pipeline.resize(device, target_width, target_height);
     }
 
     // Need to create new views as the borrow checker complains about about multiple refs.
     // TODO: find a better solution
-    let hdr_view = renderers.hdr_pipeline.texture().create_view(&wgpu::TextureViewDescriptor::default());
+    let hdr_view = renderers.downscale_pipeline.top_texture().create_view(&wgpu::TextureViewDescriptor::default());
     let color_view = color_texture.create_view(&wgpu::TextureViewDescriptor::default());
     let depth_view = renderers.hdr_pipeline.depth_texture().create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -144,11 +156,16 @@ pub fn render_to_texture(
         true,
     );
 
-    let hdr_cmd_buffer = renderers.hdr_pipeline.process(&device, &color_view, viewport);
+    let downscale_cmd_buffer = renderers.downscale_pipeline.process(&device);
+    let top_bind_group = renderers.downscale_pipeline.top_bind_group();
+    let bottom_bind_group = renderers.downscale_pipeline.bottom_bind_group();
+
+    let hdr_cmd_buffer = renderers.hdr_pipeline.process(&device, top_bind_group, bottom_bind_group,&color_view, viewport);
 
     device.queue().submit([
         skybox_cmd_buffer,
         phong_cmd_buffer,
+        downscale_cmd_buffer,
         hdr_cmd_buffer
     ]);
 }
