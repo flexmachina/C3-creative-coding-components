@@ -31,6 +31,10 @@ Instructions [here](https://github.com/flexmachina/C3-creative-coding-components
     - Audio import ⏹️ 
     - Audio controller ⏹️
 
+# Support & Discussion
+- [Discord](https://discord.com/invite/u5jy7sMxB7)
+
+
 # Credits 
 
 ## Code & Tutorials
