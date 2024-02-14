@@ -67,7 +67,7 @@ impl HdrPipeline {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
-            bind_group_layouts: &[&layout],
+            bind_group_layouts: &[&layout, &layout],
             push_constant_ranges: &[],
         });
 
@@ -167,7 +167,7 @@ impl HdrPipeline {
 
     // This renders the internal HDR texture to the supplied TextureView
     // The viewport is supplied in WebXR mode
-    pub fn process(&self, device: &wgpu::Device, output: &wgpu::TextureView, viewport: Option<Rect>) -> wgpu::CommandBuffer {
+    pub fn process(&self, device: &wgpu::Device, top_bind_group: &wgpu::BindGroup, bloom_bind_group: &wgpu::BindGroup,  output: &wgpu::TextureView, viewport: Option<Rect>) -> wgpu::CommandBuffer {
 
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Hdr::command_encoder"),
@@ -193,7 +193,8 @@ impl HdrPipeline {
             };
 
             pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
+            pass.set_bind_group(0, &top_bind_group, &[]);
+            pass.set_bind_group(1, &bloom_bind_group, &[]);
             pass.draw(0..3, 0..1);
         }
 

@@ -19,19 +19,19 @@ impl Light {
         ));
         commands.spawn((
             Light {
-                color: Vec3f::new(5.0,3.,3.)
+                color: Vec3f::new(0.0,10.,0.)
             },
             Transform::from_position(Vec3f::new(5., 2., -5.)),
         ));
         commands.spawn((
             Light {
-                color: Vec3f::new(0.,5.,5.)
+                color: Vec3f::new(0.,0.,10.)
             },
             Transform::from_position(Vec3f::new(5., 2., 5.)),
         ));
         commands.spawn((
             Light {
-                color: Vec3f::new(10.,5.,0.)
+                color: Vec3f::new(5.,5.,5.)
             },
             Transform::from_position(Vec3f::new(-5., 2., 5.)),
         ));

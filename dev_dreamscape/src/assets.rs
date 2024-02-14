@@ -378,8 +378,9 @@ impl Assets {
             "cube.obj",
             "sphere.obj",
             "Sci-Fi-Floor.obj",
+            //"rocky-sphere.obj",
             //"moon_surface/moon_surface.obj",
-            "mars_surface/Crater.obj",
+            //"mars_surface/Crater.obj",
             "Rock1/RedishRock.obj",
             "Rock2/Rock2.obj",
             "Rock1/RedishRock-collider.obj",
@@ -388,7 +389,7 @@ impl Assets {
 
         let collision_model_paths = vec![
             "Sci-Fi-Floor.obj",
-            "mars_surface/Crater_low-collision.obj",
+            //"mars_surface/Crater_low-collision.obj",
             //"moon_surface/moon_surface-collider.obj",
             "Rock1/RedishRock-collider.obj",
             "Rock2/Rock2-collider.obj",

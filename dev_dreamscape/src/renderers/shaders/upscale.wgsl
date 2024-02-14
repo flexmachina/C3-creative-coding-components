@@ -33,7 +33,7 @@ fn fs_main(vs: VertexOutput) -> @location(0) vec4<f32> {
     // The filter kernel is applied with a radius, specified in texture
     // coordinates, so that the radius will vary across mip resolutions.
     let srcTexelSize = vec2f(1.0) / vec2f(textureDimensions(src_texture));
-    let filterRadius = max(srcTexelSize.x, srcTexelSize.y);
+    let filterRadius = max(srcTexelSize.x, srcTexelSize.y) * 3.;
     let x = filterRadius;
     let y = filterRadius;
 

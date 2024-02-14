@@ -51,10 +51,21 @@ var hdr_image: texture_2d<f32>;
 @binding(1)
 var hdr_sampler: sampler;
 
+
+@group(1)
+@binding(0)
+var bloom_image: texture_2d<f32>;
+
+@group(1)
+@binding(1)
+var bloom_sampler: sampler;
+
+
 @fragment
 fn fs_main(vs: VertexOutput) -> @location(0) vec4<f32> {
     let hdr = textureSample(hdr_image, hdr_sampler, vs.uv);
-    let sdr = aces_tone_map(hdr.rgb);
+    let bloom = textureSample(bloom_image, bloom_sampler, vs.uv);
+    let sdr = aces_tone_map(0.8*hdr.rgb + 0.2*bloom.rgb);
 
 #ifdef WEBXR
     let final_color = utils::gamma_correction(sdr);
