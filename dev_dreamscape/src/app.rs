@@ -38,27 +38,38 @@ pub struct App {
     pub world: World,
 }
 
-/*
+type EventState = SystemState<(
+    EventWriter<'static, WindowResizeEvent>,
+    EventWriter<'static, KeyboardEvent>,
+    EventWriter<'static, MouseEvent>,
+    EventWriter<'static, FrameTimeEvent>,
+    EventWriter<'static, HandUpdateEvent>,
+    EventWriter<'static, CameraSetEvent>,
+)>;
+
+type QueryState = SystemState<(
+    Res<'static, Device>,
+    Res<'static, Assets>,
+    ResMut<'static, Renderers>,
+    Query<'static, 'static, (&'static Camera, &'static Transform), With<Player>>,
+    Query<'static, 'static, &'static Skybox>,
+    Query<'static, 'static, (&'static ModelSpec, &'static Transform)>,
+    Query<'static, 'static, (&'static Light, &'static Transform)>,
+)>;
+
+type EventLoopState = SystemState<(
+    NonSend<'static, Window>,
+    ResMut<'static, Input>,
+    EventWriter<'static, WindowResizeEvent>,
+    EventWriter<'static, KeyboardEvent>,
+    EventWriter<'static, MouseEvent>,
+)>;
+
 #[derive(Resource)]
 struct CachedSystemState {
-    world_state: SystemState<(
-            NonSend<'static,Window>,
-            Res<'static,Device>,
-            Res<'static,Assets>,
-            ResMut<'static,Renderers>,
-            //NonSendMut<EventLoop<()>>,
-            ResMut<'static,Input>,
-            EventWriter<'static,WindowResizeEvent>,
-            EventWriter<'static,KeyboardEvent>,
-            EventWriter<'static,MouseEvent>,
-            EventWriter<'static,FrameTimeEvent>,
-            EventWriter<'static,CameraSetEvent>,
-        )>,
-    event_state:
+    event_state: EventState,
+    query_state: QueryState
 }
-*/
-
-
 
 impl App {
     pub async fn new(window: Window, webxr: bool) -> Self {
@@ -92,25 +103,13 @@ impl App {
         world.init_resource::<Events<HandUpdateEvent>>();
         world.init_resource::<Events<CameraSetEvent>>();
 
-        /*
-        let world_systemstate: SystemState<(
-            NonSend<Window>,
-            Res<Device>,
-            Res<Assets>,
-            ResMut<Renderers>,
-            //NonSendMut<EventLoop<()>>,
-            ResMut<Input>,
-            EventWriter<WindowResizeEvent>,
-            EventWriter<KeyboardEvent>,
-            EventWriter<MouseEvent>,
-            EventWriter<FrameTimeEvent>,
-            EventWriter<CameraSetEvent>,
-        )> = SystemState::from_world(&mut world);
+        let event_state: EventState = SystemState::from_world(&mut world);
+        let query_state: QueryState = SystemState::from_world(&mut world);
 
-        world.insert_resource(CachedWorldSystemState {
-            world_state: world_systemstate 
+        world.insert_resource(CachedSystemState {
+            event_state,
+            query_state
         });
-        */
 
         // Schedules
         let spawn_scene_schedule = new_spawn_scene_schedule(webxr);
@@ -138,30 +137,6 @@ impl App {
         self.world.insert_resource(assets);
     }
 
-    fn world_systemstate_get_mut(&mut self) -> (NonSend<Window>,Res<Device>,Res<Assets>,
-                                ResMut<Renderers>,//NonSendMut<EventLoop<()>>,
-                                ResMut<Input>,
-                                EventWriter<WindowResizeEvent>, EventWriter<KeyboardEvent>,
-                                EventWriter<MouseEvent>, EventWriter<FrameTimeEvent>,
-                                EventWriter<HandUpdateEvent>, EventWriter<CameraSetEvent>) {
-
-        let mut world_systemstate: SystemState<(
-            NonSend<Window>,
-            Res<Device>,
-            Res<Assets>,
-            ResMut<Renderers>,
-            //NonSendMut<EventLoop<()>>,
-            ResMut<Input>,
-            EventWriter<WindowResizeEvent>,
-            EventWriter<KeyboardEvent>,
-            EventWriter<MouseEvent>,
-            EventWriter<FrameTimeEvent>,
-            EventWriter<HandUpdateEvent>,
-            EventWriter<CameraSetEvent>,
-        )> = SystemState::from_world(&mut self.world);
-        world_systemstate.get_mut(&mut self.world)
-    }
-
     #[allow(dead_code)]
     pub fn device(&self) -> &Device {
         //let (_,device,_,_,_,_,_,_,_,_) = self.world_systemstate_get_mut();
@@ -177,12 +152,10 @@ impl App {
     }
 
     #[allow(dead_code)]
-    pub fn update_scene(&mut self, duration: std::time::Duration) {
-        //TODO need to set the time via event
-        let (_,_,_,_,_,_,_,_,mut frametime_events, _, _) = 
-                            self.world_systemstate_get_mut();
-        frametime_events.send(FrameTimeEvent {
-            duration,
+    pub fn update_scene(&mut self, duration: std::time::Duration) {        
+        self.world.resource_scope(|world, mut cached_state: Mut<CachedSystemState>| {
+            let mut frametime_events = cached_state.event_state.get_mut(world).3;
+            frametime_events.send(FrameTimeEvent{duration});
         });
         self.world.run_schedule(SpawnLabel);
         self.world.run_schedule(PreupdateLabel);
@@ -196,44 +169,43 @@ impl App {
         joint_transforms: Vec<Mat4f>,
         joint_radii: Vec<f32>
     ) {
-        let (_,_,_,_,_,_,_,_,_, mut hand_update_events, _) = 
-                            self.world_systemstate_get_mut();
-        hand_update_events.send(HandUpdateEvent {
-            hand,
-            joint_transforms,
-            joint_radii,
+        self.world.resource_scope(|world, mut cached_state: Mut<CachedSystemState>| {
+            let mut hand_update_events = cached_state.event_state.get_mut(world).4;
+            hand_update_events.send(HandUpdateEvent {
+                hand,
+                joint_transforms,
+                joint_radii,
+            });
         });
         self.world.run_schedule(HandUpdateLabel);
     }
 
     #[allow(dead_code)]
     pub fn update_camera(&mut self, pos: Vec3f, rot: UnitQuatf, projection_matrix: Mat4f) {
-        let (_,_,_,_,_,_,_,_,_,_, mut cameraset_events) = 
-                            self.world_systemstate_get_mut();
-        cameraset_events.send(CameraSetEvent {
-            pos,
-            rot,
-            projection_matrix
+        self.world.resource_scope(|world, mut cached_state: Mut<CachedSystemState>| {
+            let mut cameraset_events = cached_state.event_state.get_mut(world).5;                    
+            cameraset_events.send(CameraSetEvent {
+                pos,
+                rot,
+                projection_matrix
+            });
         });
         self.world.run_schedule(CameraUpdateLabel);
     }
 
     #[allow(dead_code)]
     pub fn render_to_texture(&mut self, color_texture: &wgpu::Texture, viewport: Option<Rect>, clear: bool) {
-
-        let mut world_w_queries_systemstate: SystemState<(
-            Res<Device>,
-            Res<Assets>,
-            ResMut<Renderers>,
-            Query<(&Camera, &Transform), With<Player>>,
-            Query<&Skybox>,
-            Query<(&ModelSpec, &Transform)>,
-            Query<(&Light, &Transform)>,
-        )> = SystemState::from_world(&mut self.world);
-        let (device, assets, renderers, camera_qry, skybox_qry, meshes_qry,light_qry) = 
-                            world_w_queries_systemstate.get_mut(&mut self.world);
+        self.world.resource_scope(|world, mut cached_state: Mut<CachedSystemState>| {
+            let (device,
+                 assets,
+                 renderers,
+                 camera_qry,
+                 skybox_qry,
+                 meshes_qry,
+                 light_qry
+            ) = cached_state.query_state.get_mut(world);   
         
-        render_to_texture(
+            render_to_texture(
                 &device,
                 assets,
                 renderers,
@@ -243,9 +215,9 @@ impl App {
                 light_qry,
                 &color_texture,
                 viewport,
-                clear);
-
-
+                clear
+            );
+        });
     }
 
 }
@@ -336,6 +308,8 @@ pub async fn run_experience(webxr: bool) {
     let experience = Experience::new(window, webxr).await;
     printlog("running init_app - created experience");
 
+    let mut eventloop_state: EventLoopState = SystemState::from_world(&mut experience.app.borrow_mut().world);
+
     let event_handler = move |event: Event<()> , _: &EventLoopWindowTarget<()>, 
                              control_flow: &mut ControlFlow| {
 
@@ -345,18 +319,11 @@ pub async fn run_experience(webxr: bool) {
 
         let (
             window,
-            _,
-            _,
-            _,
             mut input,
             mut resize_events,
             mut keyboard_events,
             mut mouse_events,
-            _,
-            _,
-            _
-        ) = app.world_systemstate_get_mut();
-
+        ) = eventloop_state.get_mut(&mut app.world);
 
         input.reset();
         match event {
