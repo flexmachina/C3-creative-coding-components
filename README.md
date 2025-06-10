@@ -3,13 +3,12 @@ WASM based tools for creative coders to generate 3D & XR art experiences
 
 # Demos
 
-https://github.com/user-attachments/assets/31d4a53a-fae1-496b-b498-349ca85a34a1
+
+https://github.com/user-attachments/assets/7e16d910-8c91-4163-9a8c-c79c2dd89216
 
 
 
 https://github.com/user-attachments/assets/e16390a1-a451-4a26-833f-a97f0ea87686
-
-
 
 
 
