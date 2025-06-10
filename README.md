@@ -1,5 +1,18 @@
-# C3-creative-coding-components
+[Screencast from 2024-02-12 00-07-45.webm](https://github.com/user-attachments/assets/d3a8e960-45e9-4eeb-8e6c-085fe92da927)# C3-creative-coding-components
 WASM based tools for creative coders to generate 3D & XR art experiences
+
+# Demos
+
+[Screencast from 2024-02-12 00-07-45.webm](https://github.com/user-attachments/assets/31d4a53a-fae1-496b-b498-349ca85a34a1)
+
+
+
+https://github.com/user-attachments/assets/e16390a1-a451-4a26-833f-a97f0ea87686
+
+
+
+
+
 
 # Usage
 Instructions [here](https://github.com/flexmachina/C3-creative-coding-components/tree/main/dev_dreamscape)
